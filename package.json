@@ -15,6 +15,7 @@
   },
   "private": true,
   "dependencies": {
-    "@tauri-apps/api": "^2.11.1"
+    "@tauri-apps/api": "^2.11.1",
+    "cherry-markdown-next": "^0.1.1"
   }
 }

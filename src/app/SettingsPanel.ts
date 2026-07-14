@@ -120,7 +120,6 @@ const AI_FIELDS: Field[] = [
     type: "number",
     hint: `-1 表示按动作内置（润色 ${AI_ACTION_TEMPERATURE.polish} / 校对 ${AI_ACTION_TEMPERATURE.proofread} / 翻译 ${AI_ACTION_TEMPERATURE.translate} / 摘要 ${AI_ACTION_TEMPERATURE.summarize}）`,
   },
-  { key: "ai.timeoutMs", label: "超时(ms)", type: "number" },
   {
     key: "ai.prompt.polish",
     label: "润色提示词",

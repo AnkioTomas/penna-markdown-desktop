@@ -24,8 +24,8 @@ importers:
         specifier: ^2.4.3
         version: 2.4.3
       cherry-markdown-next:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.1.6
+        version: 0.1.6
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.11.4
@@ -312,8 +312,8 @@ packages:
   '@types/node@26.1.1':
     resolution: {integrity: sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw==}
 
-  cherry-markdown-next@0.1.5:
-    resolution: {integrity: sha512-xXfj55dSHfiSWofrV9PwVEu8CIiB3Sht7yxWrVGmdI8wn29MMSTmWVoSBmWQygrvX18seQciWLB8yn6R92JDSw==}
+  cherry-markdown-next@0.1.6:
+    resolution: {integrity: sha512-b8bLrUqJTSMl33BMjjdMdYkMNc6mUXm0ZqHltguGrHgufSTp8rLprxFfuzXY2WymhHUzVDMDMKPpFhosmSCRNg==}
 
   crelt@1.0.7:
     resolution: {integrity: sha512-aK6BbWfhf4U/wCcLHKPJl/xa6VkVstRaPywWtMKGwuOLc/wZTyQYuoxgvZnNsBvv7Kg3YTBQYYBCggcviQczuA==}
@@ -785,7 +785,7 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
-  cherry-markdown-next@0.1.5:
+  cherry-markdown-next@0.1.6:
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-markdown': 6.5.0

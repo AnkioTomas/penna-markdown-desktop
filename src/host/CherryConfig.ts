@@ -33,18 +33,18 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
   "upload.timeoutMs": 60_000,
   "ai.enabled": false,
   "ai.provider": "openai",
-  "ai.endpoint": "",
+  "ai.endpoint": "https://api.openai.com/v1",
   "ai.apiKey": "",
-  "ai.apiKeyEnv": "",
-  "ai.model": "",
-  "ai.temperature": -1,
+
+  "ai.model": "gpt-4o-mini",
+  "ai.temperature": 0.7,
   "ai.headers": {},
   "ai.timeoutMs": 120_000,
-  "ai.prompt.polish": "",
-  "ai.prompt.proofread": "",
-  "ai.prompt.translate": "",
-  "ai.prompt.summarize": "",
-  "ai.prompt.custom": "",
+  "ai.prompt.polish": "你是一个专业的文本编辑。请对以下文本进行润色，改善其表达的流畅度和语感，纠正生硬的表述。请保持原文的 Markdown 格式不变，仅输出润色后的文本，不要输出任何解释性的废话：\n\n",
+  "ai.prompt.proofread": "你是一个专业的校对员。请对以下文本进行错别字和语病校对，修正错误的标点符号。请保持原文的 Markdown 格式不变，仅输出校对后的文本，不要输出任何解释性的废话：\n\n",
+  "ai.prompt.translate": "你是一个专业的翻译。请将以下文本翻译为流畅的目标语言（中文翻译为英文，外文翻译为中文）。请保持原文的 Markdown 格式不变，仅输出翻译结果，不要输出任何解释性的废话：\n\n",
+  "ai.prompt.summarize": "请提取以下文本的核心内容，生成一份简明扼要的摘要，并保留关键信息。仅输出摘要，不要输出任何解释性的废话：\n\n",
+  "ai.prompt.custom": "请根据以下指令处理文本，仅输出处理结果：\n\n",
 };
 
 const DEFAULTS = CONFIG_DEFAULTS;

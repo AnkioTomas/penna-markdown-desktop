@@ -4,82 +4,14 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--cherry-c-bg, #fff);
-  color: var(--cherry-c-text-1, #1f2328);
-}
-
-body.cherry-dark {
-  background: var(--cherry-c-bg, #1e1e1e);
-  color: var(--cherry-c-text-1, #cccccc);
-}
-
-/*
- * Cherry 预览区有 padding:14px，默认 content-box 会把 padding 叠在 flex 分配宽度之外，
- * .cherry-body { overflow:hidden } 会把多出来的右侧直接裁掉。
- */
-#cherry-root,
-#cherry-root .cherry,
-#cherry-root .cherry-toolbar,
-#cherry-root .cherry-body,
-#cherry-root .cherry-editor,
-#cherry-root .cherry-preview,
-#cherry-root .cherry-statusbar {
-  box-sizing: border-box;
 }
 
 #cherry-root {
   width: 100%;
   height: 100%;
-  min-width: 0;
-  overflow: hidden;
 }
 
-#cherry-root .cherry {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  min-width: 0;
-  overflow: hidden;
-  background: var(--cherry-c-bg);
-}
-
-#cherry-root .cherry-toolbar {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-#cherry-root .cherry-body {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-#cherry-root .cherry-body--split .cherry-editor,
-#cherry-root .cherry-body--split .cherry-preview {
-  min-width: 0 !important;
-  max-width: none !important;
-}
-
-#cherry-root .cherry-preview {
-  width: 100%;
-  background: var(--cherry-c-bg);
-  scrollbar-gutter: stable;
-}
-
-#cherry-root .cherry-preview .cherry-render {
-  max-width: 100%;
-}
-
-#cherry-root .cherry-editor,
-#cherry-root .cherry-editor-cm,
-#cherry-root .cherry-editor-cm .cm-editor,
-#cherry-root .cherry-editor-cm .cm-gutters {
-  background: var(--cherry-c-bg);
-}
-
-/* 设置弹窗：复用 cherry-dialog-*，只补宽度与分组标题 */
+/* 设置弹窗：桌面宿主自己的表单宽度 / 分组 */
 .cherry-dialog-form--settings {
   min-width: min(560px, 92vw);
   width: min(640px, 92vw);
@@ -118,10 +50,7 @@ body.cherry-dark {
   flex-shrink: 0;
 }
 
-/*
- * macOS/WKWebView 原生 select 会无视 border/radius/background。
- * Cherry 本体也没写 appearance:none，这里补齐，让下拉和 input 看起来一致。
- */
+/* macOS WKWebView 原生 select 不吃 border/background，设置弹窗里补一下 */
 .cherry-dialog-field select {
   -webkit-appearance: none;
   appearance: none;
@@ -132,7 +61,6 @@ body.cherry-dark {
   padding-right: 36px;
 }
 
-body.cherry-dark .cherry-dialog-field select,
-.cherry-dark .cherry-dialog-field select {
+body.cherry-dark .cherry-dialog-field select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23bbb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }

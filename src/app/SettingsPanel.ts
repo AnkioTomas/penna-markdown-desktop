@@ -106,12 +106,7 @@ const AI_FIELDS: Field[] = [
     hint: "留空使用供应商预设",
   },
   { key: "ai.apiKey", label: "API Key", type: "text" },
-  {
-    key: "ai.apiKeyEnv",
-    label: "API Key 环境变量",
-    type: "text",
-    emptyMeans: "例如 OPENAI_API_KEY",
-  },
+
   {
     key: "ai.model",
     label: "模型",

@@ -27,8 +27,8 @@ function buildExportHtml(title: string, bodyHtml: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
   <style>
-    html, body { margin: 0; padding: 0; background: #fff; color: #1f2328; }
-    .cherry-export { max-width: 720px; margin: 0 auto; }
+    html, body { margin: 0; padding: 0; overflow: scroll!important;}
+    .cherry-export { max-width: 800px; margin: 0 auto; }
     ${styles}
     @media print {
       body { padding: 0; }
@@ -72,40 +72,52 @@ export async function exportHtml(docPath: string | null): Promise<boolean> {
   return true;
 }
 
-/**
- * 打开系统打印对话框；用户可在对话框中选择「存储为 PDF」。
- */
 export async function exportPdf(docPath: string | null): Promise<void> {
-  const title = docPath ? basename(docPath) : "Cherry Markdown";
-  const html = buildExportHtml(title, getPreviewHtml());
-  const frame = document.createElement("iframe");
-  frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "0";
-  frame.style.height = "0";
-  frame.style.border = "0";
-  document.body.appendChild(frame);
+  const bodyHtml = getPreviewHtml();
+  const styles = collectInlineStyles();
 
-  const win = frame.contentWindow;
-  const doc = frame.contentDocument;
-  if (!win || !doc) {
-    frame.remove();
-    throw new Error("无法创建打印预览");
+  // Create a container that is ONLY visible during print
+  const container = document.createElement("div");
+  container.id = "cherry-print-container";
+  container.innerHTML = `
+    <div class="cherry-export cherry-render cherry-preview">${bodyHtml}</div>
+  `;
+  document.body.appendChild(container);
+
+  // Inject print styles
+  const styleEl = document.createElement("style");
+  styleEl.id = "cherry-print-style";
+  styleEl.textContent = `
+    @media screen {
+      #cherry-print-container { display: none !important; }
+    }
+    @media print {
+      #cherry-root { display: none !important; }
+      #cherry-print-container { display: block !important; background: #fff; color: #1f2328; width: 100%; }
+      .cherry-export { max-width: none !important; margin: 0 !important; }
+      ${styles}
+    }
+  `;
+  document.head.appendChild(styleEl);
+
+  // Give the browser a tick to apply styles
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  const cleanup = () => {
+    if (container.parentNode) container.remove();
+    if (styleEl.parentNode) styleEl.remove();
+    window.removeEventListener("afterprint", cleanup);
+  };
+  
+  window.addEventListener("afterprint", cleanup);
+  
+  try {
+    window.print();
+  } catch (e) {
+    cleanup();
+    throw e;
   }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  await new Promise<void>((resolve) => {
-    const done = () => resolve();
-    frame.onload = () => done();
-    // 部分 WebView 不会触发 iframe onload
-    window.setTimeout(done, 300);
-  });
-
-  win.focus();
-  win.print();
-  window.setTimeout(() => frame.remove(), 1000);
+  
+  // Fallback cleanup in case afterprint doesn't fire
+  window.setTimeout(cleanup, 5000);
 }

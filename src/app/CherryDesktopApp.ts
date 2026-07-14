@@ -3,6 +3,7 @@ import {
   DEFAULT_TOOLBAR_ITEMS,
   type CherryOptions,
   type EditorOptions,
+  type SideBarOptions,
   type ToolbarItem,
 } from "cherry-markdown-next";
 import "cherry-markdown-next/editor.css";
@@ -38,20 +39,6 @@ interface CherryBoot {
   aiEnabled: boolean;
 }
 
-const SETTINGS_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" class="cherry-toolbar-icon" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.15 7.15 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.42l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.77 14.5a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.39.3.59.22l2.39-.96c.5.39 1.03.7 1.62.94l.36 2.54c.05.24.24.42.48.42h4c.24 0 .44-.18.48-.42l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>`;
-
-const FILE_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" class="cherry-toolbar-icon" aria-hidden="true"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>`;
-
-export async function fileToBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
 
 function resolveAppearance(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -92,10 +79,11 @@ export class CherryDesktopApp {
     }
     this.bindWindowEvents();
     this.bindAppearanceWatcher();
-    this.bindShortcuts();
     await this.bindOpenFileEvents();
     await this.session.refreshTitle();
   }
+
+
 
   private isUploadEnabled(): boolean {
     const mode = this.config.getItem<UploadMode>("upload.mode", "off");
@@ -122,67 +110,7 @@ export class CherryDesktopApp {
     };
   }
 
-  private buildFileToolbarItems(): ToolbarItem {
-    return {
-      id: "file",
-      type: "menu",
-      label: "文件",
-      title: "文件",
-      icon: FILE_ICON,
-      children: [
-        {
-          id: "file-open-folder",
-          label: "打开文件夹…",
-          title: "打开文件夹",
-          onClick: () => {
-            void this.handleOpenFolder();
-          },
-        },
-        {
-          id: "file-open",
-          label: "打开文件…",
-          title: "打开文件 (⌘O)",
-          onClick: () => {
-            void this.handleOpen();
-          },
-        },
-        { id: "file-sep-1", type: "separator" },
-        {
-          id: "file-save",
-          label: "保存",
-          title: "保存 (⌘S)",
-          onClick: () => {
-            void this.handleSave();
-          },
-        },
-        {
-          id: "file-save-as",
-          label: "另存为…",
-          title: "另存为 (⇧⌘S)",
-          onClick: () => {
-            void this.handleSaveAs();
-          },
-        },
-        { id: "file-sep-2", type: "separator" },
-        {
-          id: "file-export-html",
-          label: "导出 HTML…",
-          title: "导出为 HTML",
-          onClick: () => {
-            void this.handleExportHtml();
-          },
-        },
-        {
-          id: "file-export-pdf",
-          label: "导出 PDF…",
-          title: "导出为 PDF（系统打印）",
-          onClick: () => {
-            void this.handleExportPdf();
-          },
-        },
-      ],
-    };
-  }
+
 
   private buildEditorOptions(boot: CherryBoot): EditorOptions {
     const editorOptions: EditorOptions = {
@@ -191,17 +119,19 @@ export class CherryDesktopApp {
     };
 
     if (boot.uploadEnabled) {
+      // 拦截默认 Web 上传行为，将本地文件读取操作转交给 Tauri 原生 IPC 处理
       editorOptions.onParseFile = async (file) => {
         try {
           const path = this.session.getPath();
           if (!path) {
             throw new Error("请先保存文档后再上传本地文件");
           }
-          const dataBase64 = await fileToBase64(file);
+          const buffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
           return await new CherryUploader(path, this.config).upload({
             name: file.name,
             mime: file.type,
-            dataBase64,
+            bytes,
           });
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
@@ -236,38 +166,38 @@ export class CherryDesktopApp {
     return editorOptions;
   }
 
+  private buildSidebarOptions(enabled: boolean): SideBarOptions | boolean {
+    if (!enabled) {
+      return false;
+    }
+    if (!this.session.getFolderRoot()) {
+      // 无工作区：只显示大纲（编辑器默认行为）
+      return true;
+    }
+    return {
+      fetchFiles: () => this.session.listWorkspaceFiles(),
+      onFileClick: (fileId) => {
+        void this.handleSidebarFileClick(fileId);
+      },
+    };
+  }
+
   private createEditor(boot: CherryBoot): void {
     if (this.editor) {
       this.editor.destroy();
       this.editor = null;
     }
 
-    document.body.classList.toggle("cherry-dark", boot.appearance === "dark");
-
     const options: CherryOptions = {
       layout: boot.layout as CherryOptions["layout"],
       appearance: boot.appearance,
       themeId: boot.theme,
       statusbar: boot.statusbar,
-      sidebar: boot.sidebar,
-      toolbar: {
-        items: [
-          this.buildFileToolbarItems(),
-          ...DEFAULT_TOOLBAR_ITEMS.filter(
-            (item) => boot.aiEnabled || item.id !== "ai",
-          ),
-          {
-            id: "desktop-settings",
-            type: "button",
-            label: "设置",
-            title: "打开设置",
-            icon: SETTINGS_ICON,
-            onClick: () => this.settings.open(),
-          },
-        ],
-      },
+      sidebar: this.buildSidebarOptions(boot.sidebar),
+      // 核心改造：弃用 Web 端工具栏，由 Tauri 原生系统菜单完全接管格式化操作
+      toolbar: false,
       preview: {
-        maxWidth: "720px",
+        maxWidth: "800px",
       },
       editor: this.buildEditorOptions(boot),
     };
@@ -277,10 +207,23 @@ export class CherryDesktopApp {
       if (this.applyingExternalUpdate) {
         return;
       }
+      // 初始化 / setMarkdown 也会冒泡 change；内容没变就别标 dirty
+      if (payload.markdown === this.session.getText()) {
+        return;
+      }
       this.session.setText(payload.markdown, true);
     });
+
+    const activePath = this.session.getPath();
+    if (activePath) {
+      this.editor.setSidebarActiveFile(activePath);
+    }
   }
 
+  /**
+   * 同步 CodeMirror 内部状态到本地 DocumentSession。
+   * 必须在文件保存或窗口关闭前调用，以确保拿到最新内容。
+   */
   private syncFromEditor(): void {
     if (!this.editor) {
       return;
@@ -291,8 +234,63 @@ export class CherryDesktopApp {
     }
   }
 
+  /**
+   * 递归转换器：将 Cherry Markdown 的 Web 工具栏 JSON 配置，
+   * 一比一映射转换为 Tauri 的原生菜单系统（包括多级子菜单和快捷键）。
+   */
+  private mapCherryToolbarToTauriItems(items: ToolbarItem[], run: (cmd: string) => () => void): any[] {
+    const ACCELERATORS: Record<string, string> = {
+      bold: "CmdOrCtrl+B",
+      italic: "CmdOrCtrl+I",
+      strikethrough: "CmdOrCtrl+Shift+X",
+      underline: "CmdOrCtrl+U",
+      code: "CmdOrCtrl+E",
+      heading1: "CmdOrCtrl+1",
+      heading2: "CmdOrCtrl+2",
+      heading3: "CmdOrCtrl+3",
+      blockquote: "CmdOrCtrl+Shift+Q",
+      unorderedList: "CmdOrCtrl+Shift+U",
+      orderedList: "CmdOrCtrl+Shift+O",
+      taskList: "CmdOrCtrl+Shift+C",
+      link: "CmdOrCtrl+K",
+      image: "CmdOrCtrl+Shift+I",
+      table: "CmdOrCtrl+Shift+T",
+      math: "CmdOrCtrl+Shift+M",
+      codeBlockBasic: "CmdOrCtrl+Shift+P",
+    };
+
+    const result: any[] = [];
+    for (const item of items) {
+      if ("type" in item && item.type === "separator") {
+        result.push({ item: "Separator" });
+      } else if (("type" in item && item.type === "menu") || "children" in item) {
+        const menu = item as any;
+        if (!menu.children || menu.children.length === 0) continue;
+        result.push({
+          text: menu.label || menu.id,
+          items: this.mapCherryToolbarToTauriItems(menu.children, run),
+        });
+      } else {
+        const btn = item as any;
+        const resItem: any = {
+          text: btn.label || btn.id,
+          action: run(btn.id),
+        };
+        if (ACCELERATORS[btn.id]) {
+          resItem.accelerator = ACCELERATORS[btn.id];
+        }
+        result.push(resItem);
+      }
+    }
+    return result;
+  }
+
   private async setupMenu(): Promise<void> {
     const appIcon = await defaultWindowIcon();
+    const run = (cmd: string) => () => { this.editor?.runCommand(cmd); };
+    
+    const dynamicItems = this.mapCherryToolbarToTauriItems(DEFAULT_TOOLBAR_ITEMS, run);
+
     const menu = await Menu.new({
       items: [
         {
@@ -344,6 +342,7 @@ export class CherryDesktopApp {
                 void this.handleOpen();
               },
             },
+            { item: "Separator" },
             {
               text: "保存",
               accelerator: "CmdOrCtrl+S",
@@ -373,23 +372,16 @@ export class CherryDesktopApp {
             },
           ],
         },
-        {
-          text: "编辑",
-          items: [
-            { item: "Undo" },
-            { item: "Redo" },
-            { item: "Separator" },
-            { item: "Cut" },
-            { item: "Copy" },
-            { item: "Paste" },
-            { item: "SelectAll" },
-          ],
-        },
+        ...dynamicItems,
       ],
     });
     await menu.setAsAppMenu();
   }
 
+  /**
+   * 拦截窗口的物理关闭事件（红叉/Cmd+Q）。
+   * 必须在这里做脏状态检查（弹窗询问是否保存），否则未保存的内容将随进程直接丢失。
+   */
   private bindWindowEvents(): void {
     void getCurrentWindow().onCloseRequested(async (event) => {
       this.syncFromEditor();
@@ -403,43 +395,12 @@ export class CherryDesktopApp {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
       const appearance = resolveAppearance();
-      document.body.classList.toggle("cherry-dark", appearance === "dark");
       this.editor?.theme.setLightDark(appearance);
     };
     media.addEventListener("change", apply);
   }
 
-  private bindShortcuts(): void {
-    window.addEventListener("keydown", (event) => {
-      const mod = event.metaKey || event.ctrlKey;
-      if (!mod) {
-        return;
-      }
-      const key = event.key.toLowerCase();
-      if (key === "s") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          void this.handleSaveAs();
-        } else {
-          void this.handleSave();
-        }
-        return;
-      }
-      if (key === "o") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          void this.handleOpenFolder();
-        } else {
-          void this.handleOpen();
-        }
-        return;
-      }
-      if (key === "n") {
-        event.preventDefault();
-        void this.handleNew();
-      }
-    });
-  }
+
 
   private async bindOpenFileEvents(): Promise<void> {
     await listen<string[]>("open-files", (event) => {
@@ -460,14 +421,29 @@ export class CherryDesktopApp {
       return;
     }
     if (await this.session.openDocument(file)) {
+      this.updateEditorContent();
+    }
+  }
+
+  /** 
+   * 仅更新内容与激活侧边栏文件，避免昂贵的 createEditor DOM 重建。
+   */
+  private updateEditorContent(): void {
+    if (!this.editor) {
       this.createEditor(this.buildBoot());
+      return;
+    }
+    this.editor.setMarkdown(this.session.getText());
+    const activePath = this.session.getPath();
+    if (activePath) {
+      this.editor.setSidebarActiveFile(activePath);
     }
   }
 
   private async handleNew(): Promise<void> {
     this.syncFromEditor();
     if (await this.session.newDocument()) {
-      this.createEditor(this.buildBoot());
+      this.updateEditorContent();
     }
   }
 
@@ -478,10 +454,20 @@ export class CherryDesktopApp {
     }
   }
 
+  private async handleSidebarFileClick(fileId: string): Promise<void> {
+    if (fileId === this.session.getPath()) {
+      return;
+    }
+    this.syncFromEditor();
+    if (await this.session.openDocument(fileId)) {
+      this.updateEditorContent();
+    }
+  }
+
   private async handleOpen(): Promise<void> {
     this.syncFromEditor();
     if (await this.session.openDocument()) {
-      this.createEditor(this.buildBoot());
+      this.updateEditorContent();
     }
   }
 

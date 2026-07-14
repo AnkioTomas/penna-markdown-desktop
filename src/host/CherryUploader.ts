@@ -1,19 +1,19 @@
-import { tempDir } from "@tauri-apps/api/path";
-import { mkdir, remove, writeFile } from "@tauri-apps/plugin-fs";
-import type { CherryConfig, UploadMode } from "./CherryConfig";
-import { join } from "./path";
-import type { BaseUploader, UploadResult } from "./uploader/BaseUploader";
-import { LocalUploader } from "./uploader/LocalUploader";
-import { PicgoUploader } from "./uploader/PicgoUploader";
-import { ScriptUploader } from "./uploader/ScriptUploader";
-import { UPicUploader } from "./uploader/UPicUploader";
+import {tempDir} from "@tauri-apps/api/path";
+import {mkdir, remove, writeFile} from "@tauri-apps/plugin-fs";
+import type {CherryConfig, UploadMode} from "./CherryConfig";
+import {join} from "./path";
+import type {BaseUploader, UploadResult} from "./uploader/BaseUploader";
+import {LocalUploader} from "./uploader/LocalUploader";
+import {PicgoUploader} from "./uploader/PicgoUploader";
+import {ScriptUploader} from "./uploader/ScriptUploader";
+import {UPicUploader} from "./uploader/UPicUploader";
 
 export type { UploadResult } from "./uploader/BaseUploader";
 
 export interface UploadRequest {
   name: string;
   mime: string;
-  dataBase64: string;
+  bytes: Uint8Array;
 }
 
 /**
@@ -42,10 +42,7 @@ export class CherryUploader {
 
     try {
       await mkdir(tmpDir, { recursive: true });
-      const bytes = Uint8Array.from(atob(request.dataBase64), (c) =>
-        c.charCodeAt(0),
-      );
-      await writeFile(tmpFile, bytes);
+      await writeFile(tmpFile, request.bytes);
       return await uploader.upload(tmpFile, request.name || fileName);
     } finally {
       await remove(tmpDir, { recursive: true }).catch(() => undefined);
@@ -63,8 +60,7 @@ export class CherryUploader {
       case "upic":
         return new UPicUploader(this.documentPath, this.config);
       default: {
-        const _exhaustive: never = mode;
-        throw new Error(`未知上传模式: ${String(_exhaustive)}`);
+        throw new Error(`未知上传模式: ${String(mode)}`);
       }
     }
   }

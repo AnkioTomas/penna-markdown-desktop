@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+
 import type { AiActionId, AiProvider, CherryConfig } from "./CherryConfig";
 
 interface AiProviderPreset {
@@ -213,16 +213,7 @@ export class CherryAi {
   }
 
   private async resolveApiKey(): Promise<string> {
-    const key = this.config.getItem<string>("ai.apiKey", "").trim();
-    if (key) {
-      return key;
-    }
-    const envName = this.config.getItem<string>("ai.apiKeyEnv", "").trim();
-    if (!envName) {
-      return "";
-    }
-    const fromEnv = await invoke<string | null>("get_env", { name: envName });
-    return fromEnv?.trim() || "";
+    return this.config.getItem<string>("ai.apiKey", "").trim();
   }
 
   private resolveSystemPrompt(action: string): string {

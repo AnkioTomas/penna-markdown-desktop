@@ -12,3 +12,8 @@ commands.allow = ["get_startup_files"]
 identifier = "allow-run-command"
 description = "Run local upload CLI / scripts"
 commands.allow = ["run_command"]
+
+[[permission]]
+identifier = "allow-print-window"
+description = "Allow calling native print_window"
+commands.allow = ["print_window"]

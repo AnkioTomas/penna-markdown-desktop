@@ -2,3 +2,5 @@ allowBuilds:
   core-js: set this to true or false
 minimumReleaseAgeExclude:
   - cherry-markdown-next
+packages:
+  - '.'

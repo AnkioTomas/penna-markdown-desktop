@@ -179,7 +179,7 @@ export class DocumentSession {
 
     const content = await readTextFile(selected);
     this.path = selected;
-    this.text = content.replace(/\r\n/g, "\n");
+    this.text = content;
     this.dirty = false;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
     this.emit();

@@ -16,7 +16,6 @@ function getPreviewHtml(): HTMLElement {
     throw new Error("无法找到编辑器根节点");
   }
 
-  // Deep clone the entire editor DOM to guarantee 100% CSS contextual match
   const clone = rootElement.cloneNode(true) as HTMLElement;
 
   // 1. Strip out UI components from the clone, leaving only the preview
@@ -25,9 +24,9 @@ function getPreviewHtml(): HTMLElement {
     ".cherry-editor",
     ".cherry-sidebar",
     ".cherry-statusbar",
-      '.cherry-sidebar-mask',
-      '.cherry-divider',
-      '.cherry-dialog-host'
+    ".cherry-sidebar-mask",
+    ".cherry-divider",
+    ".cherry-dialog-host"
   ];
   junkSelectors.forEach(selector => {
     clone.querySelectorAll(selector).forEach(n => n.remove());
@@ -49,7 +48,7 @@ function buildExportHtml(title: string, root: HTMLElement): string {
     html, body { 
       margin: 0; 
       padding: 0; 
-      overflow: scroll !important; 
+      overflow: visible !important; 
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
@@ -113,6 +112,7 @@ export async function exportPdf(docPath: string | null): Promise<void> {
   // 1. 创建 iframe 承载注入的 html（实现绝对的 CSS 隔离）
   const iframe = document.createElement("iframe");
   iframe.id = "cherry-print-iframe";
+  iframe.setAttribute("scrolling", "no");
   iframe.style.position = "absolute";
   iframe.style.top = "-9999px";
   iframe.style.left = "-9999px";

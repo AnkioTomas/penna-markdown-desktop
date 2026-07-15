@@ -421,6 +421,17 @@ export class CherryDesktopApp {
    * 必须在这里做脏状态检查（弹窗询问是否保存），否则未保存的内容将随进程直接丢失。
    */
   private bindWindowEvents(): void {
+    window.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          void this.handleSaveAs();
+        } else {
+          void this.handleSave();
+        }
+      }
+    });
+
     void getCurrentWindow().onCloseRequested(async (event) => {
       this.syncFromEditor();
       if (!(await this.session.confirmDiscard())) {

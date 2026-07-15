@@ -14,7 +14,13 @@ export class ScriptUploader extends BaseUploader {
     }
 
     const scriptPath = this.resolveConfiguredPath(script);
-    const { stdout, stderr } = await this.runCommand(scriptPath, [tempPath]);
+    
+    // 支持用户输入带空格的命令，例如 `node ./upload.js`
+    const parts = scriptPath.split(/\s+/).filter(Boolean);
+    const command = parts[0];
+    const args = [...parts.slice(1), tempPath];
+    
+    const { stdout, stderr } = await this.runCommand(command, args);
     return this.parseTyporaOutput(stdout, stderr, originalName);
   }
 

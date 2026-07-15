@@ -32,14 +32,7 @@ export abstract class BaseUploader {
   }
 
   protected resolveConfiguredPath(configured: string): string {
-    const trimmed = configured.trim();
-    if (!trimmed) {
-      return "";
-    }
-    if (isAbsolute(trimmed)) {
-      return trimmed;
-    }
-    return resolve(this.documentDir, trimmed);
+    return configured.trim();
   }
 
   /** 走自定义 `run_command`：用户配置的路径是任意的，shell scope 罩不住。 */

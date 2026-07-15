@@ -48,7 +48,7 @@ export class DocumentSession {
   /** 打开文件夹后的工作根目录（侧栏文件列表 / 相对资源 / 另存默认路径） */
   private folderRoot: string | null = null;
   private text = "";
-  private dirty = false;
+  private raw = "";
   private readonly listeners = new Set<DocumentListener>();
 
   onChange(listener: DocumentListener): () => void {
@@ -76,14 +76,11 @@ export class DocumentSession {
   }
 
   isDirty(): boolean {
-    return this.dirty;
+    return this.text !== this.raw;
   }
 
-  setText(text: string, markDirty = true): void {
+  setText(text: string): void {
     this.text = text;
-    if (markDirty) {
-      this.dirty = true;
-    }
     this.emit();
   }
 
@@ -93,8 +90,8 @@ export class DocumentSession {
     }
     this.path = null;
     this.folderRoot = null;
+    this.raw = "";
     this.text = "";
-    this.dirty = false;
     this.updateBaseHref(null);
     this.emit();
     return true;
@@ -117,8 +114,8 @@ export class DocumentSession {
     }
     this.folderRoot = picked;
     this.path = null;
+    this.raw = "";
     this.text = "";
-    this.dirty = false;
     this.updateBaseHref(picked);
     this.emit();
     return true;
@@ -179,8 +176,8 @@ export class DocumentSession {
 
     const content = await readTextFile(selected);
     this.path = selected;
+    this.raw = content;
     this.text = content;
-    this.dirty = false;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
     this.emit();
     return true;
@@ -191,7 +188,7 @@ export class DocumentSession {
       return this.saveAs();
     }
     await writeTextFile(this.path, this.text);
-    this.dirty = false;
+    this.raw = this.text;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
     this.emit();
     return true;
@@ -209,14 +206,14 @@ export class DocumentSession {
     }
     await writeTextFile(target, this.text);
     this.path = target;
-    this.dirty = false;
+    this.raw = this.text;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
     this.emit();
     return true;
   }
 
   async confirmDiscard(): Promise<boolean> {
-    if (!this.dirty) {
+    if (!this.isDirty()) {
       return true;
     }
     return ask("当前文档尚未保存，是否丢弃修改？", {
@@ -231,7 +228,7 @@ export class DocumentSession {
       : this.folderRoot
         ? `${basename(this.folderRoot)}/`
         : UNTITLED;
-    const title = `${this.dirty ? "• " : ""}${name} — Cherry Markdown Next`;
+    const title = `${this.isDirty() ? "• " : ""}${name} — Cherry Markdown Next`;
     await getCurrentWindow().setTitle(title);
   }
 

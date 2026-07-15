@@ -57,7 +57,6 @@ export class CherryDesktopApp {
   private readonly session = new DocumentSession();
   private readonly settings: SettingsPanel;
   private editor: Cherry | null = null;
-  private applyingExternalUpdate = false;
 
   constructor() {
     const rootEl = document.getElementById("cherry-root");
@@ -218,14 +217,7 @@ export class CherryDesktopApp {
 
     this.editor = new Cherry(this.root, options);
     this.editor.eventBus.on("editor:change", (payload: EditorChangePayload) => {
-      if (this.applyingExternalUpdate) {
-        return;
-      }
-      // 初始化 / setMarkdown 也会冒泡 change；内容没变就别标 dirty
-      if (payload.markdown === this.session.getText()) {
-        return;
-      }
-      this.session.setText(payload.markdown, true);
+      this.session.setText(payload.markdown);
     });
 
     const activePath = this.session.getPath();
@@ -244,7 +236,7 @@ export class CherryDesktopApp {
     }
     const markdown = this.editor.getMarkdown();
     if (markdown !== this.session.getText()) {
-      this.session.setText(markdown, true);
+      this.session.setText(markdown);
     }
   }
 

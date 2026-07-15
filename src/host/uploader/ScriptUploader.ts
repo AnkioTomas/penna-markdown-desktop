@@ -1,6 +1,38 @@
 import { BaseUploader, type UploadResult } from "./BaseUploader";
 
 /**
+ * 简单 shell-like 分词：按空白拆分，但双引号/单引号内的空白保留。
+ * 引号本身会被剥离。不处理转义——用户配的是 Windows 路径，够用了。
+ */
+function splitCommand(input: string): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  let quote = "";
+  for (const ch of input) {
+    if (quote) {
+      if (ch === quote) {
+        quote = "";
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === " " || ch === "\t") {
+      if (current) {
+        tokens.push(current);
+        current = "";
+      }
+    } else {
+      current += ch;
+    }
+  }
+  if (current) {
+    tokens.push(current);
+  }
+  return tokens;
+}
+
+/**
  * Typora Custom Command 约定：
  * - 调用：`<script> <tempPath>`
  * - 成功：stdout 首行 http(s) URL
@@ -14,9 +46,7 @@ export class ScriptUploader extends BaseUploader {
     }
 
     const scriptPath = this.resolveConfiguredPath(script);
-    
-    // 支持用户输入带空格的命令，例如 `node ./upload.js`
-    const parts = scriptPath.split(/\s+/).filter(Boolean);
+    const parts = splitCommand(scriptPath);
     const command = parts[0];
     const args = [...parts.slice(1), tempPath];
     

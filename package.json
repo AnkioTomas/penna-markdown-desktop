@@ -23,6 +23,6 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
-    "penna-markdown": "^0.1.9"
+    "penna-markdown": "^0.2.0"
   }
 }

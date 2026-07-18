@@ -24,8 +24,8 @@ importers:
         specifier: ^2.4.3
         version: 2.4.3
       penna-markdown:
-        specifier: ^0.1.9
-        version: 0.1.9
+        specifier: ^0.2.0
+        version: 0.2.0
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.11.4
@@ -420,8 +420,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  penna-markdown@0.1.9:
-    resolution: {integrity: sha512-ocCCq6JdBzexQpOpQ194tGdbmPLWiipfsZwWH0Oe5RMZtlnhR2ENb2LOpYWksdtu2PUgLGu0LZavN0ffQsJPgg==}
+  penna-markdown@0.2.0:
+    resolution: {integrity: sha512-fPQ1gNv5Ju/S3uIUhJ/2VAvcB2L+JgdZBvDyUwMMWmVxGX3bdjfaDlacFr3sFE05qlrZTMjoo75+WTSwHVuU+Q==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -851,7 +851,7 @@ snapshots:
 
   nanoid@3.3.16: {}
 
-  penna-markdown@0.1.9:
+  penna-markdown@0.2.0:
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-markdown': 6.5.1

@@ -1,6 +1,6 @@
 {
   "name": "penna-markdown-desktop",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -23,6 +23,6 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
-    "penna-markdown": "^0.1.8"
+    "penna-markdown": "^0.1.9"
   }
 }

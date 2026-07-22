@@ -330,6 +330,13 @@ export class PennaDesktopApp {
               accelerator: "CmdOrCtrl+,",
               action: () => this.settings.open(),
             },
+            {
+              text: "开发者工具",
+              accelerator: "Alt+CmdOrCtrl+I",
+              action: () => {
+                void invoke("open_devtools");
+              },
+            },
             { item: "Separator" },
             { item: "Hide", text: "隐藏" },
             { item: "HideOthers", text: "隐藏其他" },

@@ -21,6 +21,7 @@
     "allow-get-startup-files",
     "allow-run-command",
     "allow-print-window",
+    "allow-open-devtools",
     "dialog:default",
     "store:default",
     "shell:allow-open",

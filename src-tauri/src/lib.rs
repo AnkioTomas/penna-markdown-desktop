@@ -50,6 +50,15 @@ fn print_window(window: tauri::WebviewWindow) -> Result<(), String> {
   window.print().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn open_devtools(window: tauri::WebviewWindow) {
+  if window.is_devtools_open() {
+    window.close_devtools();
+  } else {
+    window.open_devtools();
+  }
+}
+
 /// 跑用户配置的上传 CLI / 脚本（路径任意，shell plugin scope 罩不住）。
 /// 必须 async + spawn_blocking：同步 wait 会堵死 Tauri 异步运行时，UI 跟着卡。
 #[tauri::command]
@@ -161,6 +170,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       get_startup_files,
       print_window,
+      open_devtools,
       run_command
     ])
     .build(tauri::generate_context!())

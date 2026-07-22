@@ -17,3 +17,8 @@ commands.allow = ["run_command"]
 identifier = "allow-print-window"
 description = "Allow calling native print_window"
 commands.allow = ["print_window"]
+
+[[permission]]
+identifier = "allow-open-devtools"
+description = "Allow opening the webview developer tools"
+commands.allow = ["open_devtools"]

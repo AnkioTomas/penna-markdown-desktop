@@ -2,6 +2,8 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 
 export type UploadMode = "off" | "local" | "script" | "picgo" | "upic";
 
+export type AppearanceMode = "light" | "dark" | "auto";
+
 export type AiActionId =
   | "polish"
   | "proofread"
@@ -22,6 +24,7 @@ export type ConfigListener = () => void;
 export const CONFIG_DEFAULTS: Record<string, unknown> = {
   "ui.layout": "split",
   "ui.theme": "default",
+  "ui.appearance": "auto",
   "ui.statusbar": true,
   "ui.sidebar": true,
   "ui.lineNumbers": true,

@@ -16,7 +16,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Menu } from "@tauri-apps/api/menu";
 import { stat } from "@tauri-apps/plugin-fs";
 import { PennaAi } from "../host/PennaAi";
-import { PennaConfig, type UploadMode } from "../host/PennaConfig";
+import { PennaConfig, type AppearanceMode, type UploadMode } from "../host/PennaConfig";
 import { PennaUploader } from "../host/PennaUploader";
 import { DocumentSession } from "./DocumentSession";
 import { copyToWechat } from "./copyToWechat";
@@ -43,7 +43,10 @@ interface PennaBoot {
 }
 
 
-function resolveAppearance(): "light" | "dark" {
+function resolveAppearance(mode: AppearanceMode): "light" | "dark" {
+  if (mode === "light" || mode === "dark") {
+    return mode;
+  }
   return window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
@@ -107,9 +110,13 @@ export class PennaDesktopApp {
   }
 
   private buildBoot(): PennaBoot {
+    const appearanceMode = this.config.getItem<AppearanceMode>(
+      "ui.appearance",
+      "auto",
+    );
     return {
       text: this.session.getText(),
-      appearance: resolveAppearance(),
+      appearance: resolveAppearance(appearanceMode),
       layout: this.config.getItem<string>("ui.layout", "split"),
       theme: this.config.getItem<string>("ui.theme", "default"),
       statusbar: this.config.getItem<boolean>("ui.statusbar", true),
@@ -203,6 +210,8 @@ export class PennaDesktopApp {
       this.editor.destroy();
       this.editor = null;
     }
+
+    void this.applyWindowTheme();
 
     const options: PennaOptions = {
       layout: boot.layout as PennaOptions["layout"],
@@ -468,10 +477,22 @@ export class PennaDesktopApp {
   private bindAppearanceWatcher(): void {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      const appearance = resolveAppearance();
-      this.editor?.theme.setLightDark(appearance);
+      const mode = this.config.getItem<AppearanceMode>("ui.appearance", "auto");
+      if (mode !== "auto") {
+        return;
+      }
+      this.editor?.theme.setLightDark(resolveAppearance(mode));
     };
     media.addEventListener("change", apply);
+  }
+
+  private async applyWindowTheme(): Promise<void> {
+    const mode = this.config.getItem<AppearanceMode>("ui.appearance", "auto");
+    try {
+      await getCurrentWindow().setTheme(mode === "auto" ? null : mode);
+    } catch (error) {
+      console.warn("[penna-desktop] setTheme failed", error);
+    }
   }
 
 

@@ -47,6 +47,16 @@ const UI_FIELDS: Field[] = [
       "notion",
     ].map((value) => ({ value, label: value })),
   },
+  {
+    key: "ui.appearance",
+    label: "明暗模式",
+    type: "select",
+    options: [
+      { value: "auto", label: "自动（跟随系统）" },
+      { value: "light", label: "浅色" },
+      { value: "dark", label: "深色" },
+    ],
+  },
   { key: "ui.statusbar", label: "状态栏", type: "checkbox" },
   { key: "ui.sidebar", label: "侧边栏", type: "checkbox" },
   { key: "ui.lineNumbers", label: "行号", type: "checkbox" },

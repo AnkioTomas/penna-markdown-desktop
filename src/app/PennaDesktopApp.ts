@@ -167,6 +167,7 @@ export class PennaDesktopApp {
         selected,
         prompts,
         onUpdate,
+        signal,
       ) => {
         try {
           return await new PennaAi(this.config).request(
@@ -174,8 +175,16 @@ export class PennaDesktopApp {
             selected,
             prompts,
             onUpdate,
+            signal,
           );
         } catch (error) {
+          if (
+            signal?.aborted ||
+            (error instanceof DOMException && error.name === "AbortError") ||
+            (error instanceof Error && error.name === "AbortError")
+          ) {
+            throw error;
+          }
           const msg = error instanceof Error ? error.message : String(error);
           await message(`AI 请求失败: ${msg}`, {
             title: "AI 失败",
@@ -306,7 +315,11 @@ export class PennaDesktopApp {
 
   private async setupMenu(): Promise<void> {
     const appIcon = await defaultWindowIcon();
-    const run = (cmd: string) => () => { this.editor?.runCommand(cmd); };
+    // penna-markdown 0.2.2：AI 命令要求 ctx.logger；runCommand/commandCtx 未带 logger，
+    // 会静默 return false。走 editor:command → CommandBridge（带 logger）才是对的路径。
+    const run = (cmd: string) => () => {
+      this.editor?.eventBus.emit("editor:command", { command: cmd });
+    };
     
     const dynamicItems = this.mapPennaToolbarToTauriItems(DEFAULT_TOOLBAR_ITEMS, run);
 

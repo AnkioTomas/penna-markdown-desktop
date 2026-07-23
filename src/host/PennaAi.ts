@@ -123,7 +123,7 @@ export const AI_ACTION_TEMPERATURE: Record<string, number> = {
   custom: 0.4,
 };
 
-type AiOnUpdate = (content: string, thinking?: string) => void;
+type AiOnUpdate = (contentDelta?: string, thinkingDelta?: string) => void;
 
 interface ChatCompletionDelta {
   content?: string | null;
@@ -136,19 +136,27 @@ interface ChatCompletionChunk {
   error?: { message?: string };
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  );
+}
+
 export class PennaAi {
   constructor(private readonly config: PennaConfig) {}
 
   /**
    * 适配编辑器 `OnAiRequest`：
-   * `(action, text, prompts?, onUpdate?) => Promise<string>`
-   * 有 `onUpdate` 时走 SSE 流式，边收边推 content / thinking。
+   * `(action, text, prompts?, onUpdate?, signal?) => Promise<string>`
+   * 有 `onUpdate` 时走 SSE 流式，推送增量 contentDelta / thinkingDelta。
    */
   public async request(
     action: string,
     text: string,
     prompts?: string,
     onUpdate?: AiOnUpdate,
+    signal?: AbortSignal,
   ): Promise<string> {
     if (!this.config.getItem<boolean>("ai.enabled", false)) {
       throw new Error("AI 未启用");
@@ -181,8 +189,12 @@ export class PennaAi {
           temperature,
           stream: Boolean(onUpdate),
         }),
+        signal,
       });
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
       const raw = error instanceof Error ? error.message : String(error);
       throw new Error(`网络连接失败: ${raw}`);
     }
@@ -202,6 +214,9 @@ export class PennaAi {
     try {
       rawBody = await response.text();
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
       const raw = error instanceof Error ? error.message : String(error);
       throw new Error(`网络连接失败: ${raw}`);
     }
@@ -241,7 +256,6 @@ export class PennaAi {
     const decoder = new TextDecoder();
     let buffer = "";
     let content = "";
-    let thinking = "";
 
     while (true) {
       let done: boolean;
@@ -249,6 +263,9 @@ export class PennaAi {
       try {
         ({ done, value } = await reader.read());
       } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
         const raw = error instanceof Error ? error.message : String(error);
         throw new Error(`网络连接失败: ${raw}`);
       }
@@ -287,20 +304,23 @@ export class PennaAi {
           continue;
         }
 
-        if (typeof delta.content === "string" && delta.content) {
-          content += delta.content;
+        const contentDelta =
+          typeof delta.content === "string" && delta.content
+            ? delta.content
+            : undefined;
+        if (contentDelta) {
+          content += contentDelta;
         }
 
-        const thinkPiece =
+        const thinkingDelta =
           (typeof delta.reasoning_content === "string" &&
             delta.reasoning_content) ||
           (typeof delta.reasoning === "string" && delta.reasoning) ||
-          "";
-        if (thinkPiece) {
-          thinking += thinkPiece;
-        }
+          undefined;
 
-        onUpdate(content, thinking || undefined);
+        if (contentDelta || thinkingDelta) {
+          onUpdate(contentDelta, thinkingDelta || undefined);
+        }
       }
     }
 

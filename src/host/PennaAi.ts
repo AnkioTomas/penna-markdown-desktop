@@ -175,20 +175,26 @@ export class PennaAi {
       headers.Authorization = `Bearer ${apiKey}`;
     }
 
+    const body: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userContent },
+      ],
+      temperature,
+      stream: Boolean(onUpdate),
+    };
+    // 思考模式默认开启（不传参，走供应商默认）；显式关闭时传 enable_thinking=false
+    if (!this.config.getItem<boolean>("ai.thinking", true)) {
+      body.enable_thinking = false;
+    }
+
     let response: Response;
     try {
       response = await fetch(endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: userContent },
-          ],
-          temperature,
-          stream: Boolean(onUpdate),
-        }),
+        body: JSON.stringify(body),
         signal,
       });
     } catch (error) {

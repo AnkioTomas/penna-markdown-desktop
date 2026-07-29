@@ -131,6 +131,12 @@ const AI_FIELDS: Field[] = [
     hint: `-1 表示按动作内置（润色 ${AI_ACTION_TEMPERATURE.polish} / 校对 ${AI_ACTION_TEMPERATURE.proofread} / 翻译 ${AI_ACTION_TEMPERATURE.translate} / 摘要 ${AI_ACTION_TEMPERATURE.summarize}）`,
   },
   {
+    key: "ai.thinking",
+    label: "思考模式",
+    type: "checkbox",
+    hint: "关闭后请求 enable_thinking=false，适用于支持思考的模型（如 Qwen3）",
+  },
+  {
     key: "ai.prompt.polish",
     label: "润色提示词",
     type: "textarea",

@@ -41,6 +41,7 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
 
   "ai.model": "gpt-4o-mini",
   "ai.temperature": 0.7,
+  "ai.thinking": true,
   "ai.headers": {},
   "ai.prompt.polish": "你是一个专业的文本编辑。请对以下文本进行润色，改善其表达的流畅度和语感，纠正生硬的表述。请保持原文的 Markdown 格式不变，仅输出润色后的文本，不要输出任何解释性的废话：\n\n",
   "ai.prompt.proofread": "你是一个专业的校对员。请对以下文本进行错别字和语病校对，修正错误的标点符号。请保持原文的 Markdown 格式不变，仅输出校对后的文本，不要输出任何解释性的废话：\n\n",

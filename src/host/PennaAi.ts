@@ -5,6 +5,15 @@ interface AiProviderPreset {
   label: string;
   endpoint: string;
   defaultModel: string;
+  /**
+   * 关闭思考要发的请求体片段。
+   *
+   * 省略 = 这家没有可用开关，「思考模式」开关对它不可用：
+   * OpenAI 的推理模型关不掉（且未知字段会被 400 拒绝）；
+   * Ollama 兼容端点的参数未经证实，不编；
+   * `custom` 的端点由用户指定，参数也归用户，用 `ai.body` 自己填。
+   */
+  thinkingOff?: Record<string, unknown>;
 }
 
 export const AI_PROVIDERS: Record<AiProvider, AiProviderPreset> = {
@@ -17,16 +26,20 @@ export const AI_PROVIDERS: Record<AiProvider, AiProviderPreset> = {
     label: "OpenRouter",
     endpoint: "https://openrouter.ai/api/v1/chat/completions",
     defaultModel: "openai/gpt-4o-mini",
+    // https://openrouter.ai/docs/guides/best-practices/reasoning-tokens
+    thinkingOff: { reasoning: { enabled: false } },
   },
   deepseek: {
     label: "DeepSeek",
     endpoint: "https://api.deepseek.com/v1/chat/completions",
     defaultModel: "deepseek-chat",
+    thinkingOff: { thinking: { type: "disabled" } },
   },
   moonshot: {
     label: "Moonshot (Kimi)",
     endpoint: "https://api.moonshot.cn/v1/chat/completions",
     defaultModel: "moonshot-v1-8k",
+    thinkingOff: { thinking: { type: "disabled" } },
   },
   ollama: {
     label: "Ollama (本地)",
@@ -162,7 +175,7 @@ export class PennaAi {
       throw new Error("AI 未启用");
     }
 
-    const { endpoint, model } = this.resolveEndpointAndModel();
+    const { endpoint, model, preset } = this.resolveEndpointAndModel();
     const apiKey = await this.resolveApiKey();
     const system = this.resolveSystemPrompt(action);
     const userContent = this.buildUserMessage(action, text, prompts);
@@ -175,7 +188,12 @@ export class PennaAi {
       headers.Authorization = `Bearer ${apiKey}`;
     }
 
+    // 三层：内置供应商参数 → 用户自填 `ai.body`（可覆盖内置）→ 应用不变量（不可覆盖）
     const body: Record<string, unknown> = {
+      ...(this.config.getItem<boolean>("ai.thinking", true)
+        ? undefined
+        : preset.thinkingOff),
+      ...this.config.getItem<Record<string, unknown>>("ai.body", {}),
       model,
       messages: [
         { role: "system", content: system },
@@ -184,10 +202,6 @@ export class PennaAi {
       temperature,
       stream: Boolean(onUpdate),
     };
-    // 思考模式默认开启（不传参，走供应商默认）；显式关闭时传 enable_thinking=false
-    if (!this.config.getItem<boolean>("ai.thinking", true)) {
-      body.enable_thinking = false;
-    }
 
     let response: Response;
     try {
@@ -337,7 +351,11 @@ export class PennaAi {
     return final;
   }
 
-  private resolveEndpointAndModel(): { endpoint: string; model: string } {
+  private resolveEndpointAndModel(): {
+    endpoint: string;
+    model: string;
+    preset: AiProviderPreset;
+  } {
     const provider = this.config.getItem<AiProvider>("ai.provider", "openai");
     const preset = AI_PROVIDERS[provider] ?? AI_PROVIDERS.custom;
     const endpoint =
@@ -356,7 +374,7 @@ export class PennaAi {
       throw new Error("未配置 ai.model");
     }
 
-    return { endpoint, model };
+    return { endpoint, model, preset };
   }
 
   private async resolveApiKey(): Promise<string> {

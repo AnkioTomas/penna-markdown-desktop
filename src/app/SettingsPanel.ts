@@ -1,3 +1,4 @@
+import { message } from "@tauri-apps/plugin-dialog";
 import type { AiProvider, PennaConfig, UploadMode } from "../host/PennaConfig";
 import {
   AI_ACTION_PROMPTS,
@@ -9,7 +10,7 @@ type Field =
   | {
       key: string;
       label: string;
-      type: "text" | "number" | "checkbox" | "textarea";
+      type: "text" | "number" | "checkbox" | "textarea" | "json";
       /** 留空表示使用该内置值；展示为 placeholder / 回填 */
       emptyMeans?: string;
       hint?: string;
@@ -97,6 +98,12 @@ const UPLOAD_FIELDS: Field[] = [
   { key: "upload.timeoutMs", label: "超时(ms)", type: "number" },
 ];
 
+/** 从供应商表推导，避免这句说明和 AI_PROVIDERS 脱节 */
+const THINKING_CAPABLE = (Object.keys(AI_PROVIDERS) as AiProvider[])
+  .filter((id) => AI_PROVIDERS[id].thinkingOff)
+  .map((id) => AI_PROVIDERS[id].label)
+  .join(" / ");
+
 const AI_FIELDS: Field[] = [
   { key: "ai.enabled", label: "启用 AI", type: "checkbox" },
   {
@@ -134,7 +141,13 @@ const AI_FIELDS: Field[] = [
     key: "ai.thinking",
     label: "思考模式",
     type: "checkbox",
-    hint: "关闭后请求 enable_thinking=false，适用于支持思考的模型（如 Qwen3）",
+    hint: `仅 ${THINKING_CAPABLE} 支持切换；其余供应商请用下方「附加参数」自行指定`,
+  },
+  {
+    key: "ai.body",
+    label: "附加参数",
+    type: "json",
+    hint: "供应商专有参数，原样合并进请求体，可覆盖上面的思考模式开关。model / messages / temperature / stream 由上面的设置项决定，写在这里无效",
   },
   {
     key: "ai.prompt.polish",
@@ -177,6 +190,11 @@ function storedValue(config: PennaConfig, field: Field): string | boolean {
   if (field.type === "checkbox") {
     return config.getItem<boolean>(field.key, false);
   }
+  if (field.type === "json") {
+    const value = config.getItem<Record<string, unknown>>(field.key, {});
+    // 空对象显示为空框，别让用户对着一个 {} 猜要不要删
+    return Object.keys(value).length ? JSON.stringify(value, null, 2) : "";
+  }
   if (field.type === "number") {
     return String(config.getItem<number>(field.key, 0));
   }
@@ -195,7 +213,11 @@ function resolveEmptyMeans(
   field: Field,
   config: PennaConfig,
 ): string | undefined {
-  if (field.type === "select" || field.type === "checkbox") {
+  if (
+    field.type === "select" ||
+    field.type === "checkbox" ||
+    field.type === "json"
+  ) {
     return undefined;
   }
   if (field.key === "ai.endpoint") {
@@ -217,7 +239,7 @@ function renderFields(fields: Field[], config: PennaConfig): string {
         : "";
 
       if (field.type === "checkbox") {
-        return `<label class="penna-dialog-field penna-dialog-field--check" for="${id}"><input id="${id}" data-key="${field.key}" type="checkbox" ${stored ? "checked" : ""} /><span>${escapeHtml(field.label)}</span></label>`;
+        return `<label class="penna-dialog-field penna-dialog-field--check" for="${id}"><input id="${id}" data-key="${field.key}" type="checkbox" ${stored ? "checked" : ""} /><span>${escapeHtml(field.label)}</span>${hint}</label>`;
       }
 
       if (field.type === "select") {
@@ -235,6 +257,11 @@ function renderFields(fields: Field[], config: PennaConfig): string {
         typeof stored === "string" &&
         stored.trim() === "" &&
         Boolean(emptyMeans);
+
+      // data-json 既标记类型，也带上给报错用的字段名
+      if (field.type === "json") {
+        return `<label class="penna-dialog-field" for="${id}">${escapeHtml(field.label)}<textarea id="${id}" data-key="${field.key}" data-json="${escapeHtml(field.label)}" rows="4" placeholder="${escapeHtml('{"top_p": 0.9}')}">${escapeHtml(String(stored))}</textarea>${hint}</label>`;
+      }
 
       // 长文本：空配置时直接回填内置内容便于阅读；保存时若未改回写空串
       if (field.type === "textarea") {
@@ -275,6 +302,27 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
+/** 解析失败直接抛：让保存流程停下来报错，不要把坏配置写进去 */
+function parseJsonObject(label: string, raw: string): Record<string, unknown> {
+  const text = raw.trim();
+  if (!text) {
+    return {};
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`「${label}」不是合法 JSON：${detail}`);
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`「${label}」必须是 JSON 对象，例如 {"top_p": 0.9}`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
 function readValues(root: HTMLElement): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const el of root.querySelectorAll<
@@ -287,6 +335,11 @@ function readValues(root: HTMLElement): Record<string, unknown> {
     }
     if (el instanceof HTMLInputElement && el.type === "number") {
       values[key] = Number(el.value);
+      continue;
+    }
+    const jsonLabel = el.dataset.json;
+    if (jsonLabel !== undefined) {
+      values[key] = parseJsonObject(jsonLabel, el.value);
       continue;
     }
 
@@ -305,7 +358,7 @@ function readValues(root: HTMLElement): Record<string, unknown> {
   return values;
 }
 
-function bindProviderPlaceholders(root: HTMLElement): void {
+function bindProviderFields(root: HTMLElement): void {
   const providerSelect = root.querySelector<HTMLSelectElement>(
     '[data-key="ai.provider"]',
   );
@@ -314,6 +367,9 @@ function bindProviderPlaceholders(root: HTMLElement): void {
   );
   const modelInput = root.querySelector<HTMLInputElement>(
     '[data-provider-bound="model"]',
+  );
+  const thinkingInput = root.querySelector<HTMLInputElement>(
+    '[data-key="ai.thinking"]',
   );
   if (!providerSelect || !endpointInput || !modelInput) {
     return;
@@ -326,6 +382,9 @@ function bindProviderPlaceholders(root: HTMLElement): void {
       preset.endpoint || "自定义供应商需手动填写";
     modelInput.placeholder =
       preset.defaultModel || "自定义供应商需手动填写";
+    if (thinkingInput) {
+      thinkingInput.disabled = !preset.thinkingOff;
+    }
   };
 
   providerSelect.addEventListener("change", sync);
@@ -398,7 +457,7 @@ export class SettingsPanel {
       void this.save(host);
     });
 
-    bindProviderPlaceholders(host);
+    bindProviderFields(host);
     mount.appendChild(host);
     this.host = host;
     document.addEventListener("keydown", this.onKeyDown);
@@ -416,7 +475,16 @@ export class SettingsPanel {
   }
 
   private async save(root: HTMLElement): Promise<void> {
-    const values = readValues(root);
+    let values: Record<string, unknown>;
+    try {
+      values = readValues(root);
+    } catch (error) {
+      // 校验没过就别关弹窗，用户还要回去改
+      const detail = error instanceof Error ? error.message : String(error);
+      await message(detail, { title: "设置未保存", kind: "error" });
+      return;
+    }
+
     await this.config.setMany(values);
     this.close();
     this.onSaved();

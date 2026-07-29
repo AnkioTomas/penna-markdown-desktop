@@ -628,7 +628,7 @@ export class PennaDesktopApp {
   private async handleExportPdf(): Promise<void> {
     this.syncFromEditor();
     try {
-      await exportPdf(this.session.getPath());
+      await exportPdf();
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       await message(`导出 PDF 失败: ${msg}`, {

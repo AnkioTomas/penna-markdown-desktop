@@ -26,6 +26,9 @@ function collectDocumentStyles(): string {
 /**
  * 导出只需要：主题 class 壳 + 预览内容层。
  * 不要整棵 `#penna-root`（会带上编辑器布局的 height/overflow 污染）。
+ *
+ * 摘掉 `penna-dark`：所有深色规则都靠这个 class 命中，
+ * 深色 token 打到白纸上等于没有对比度。导出物恒定白天模式。
  */
 function getExportRoot(): HTMLElement {
   const appRoot = document.querySelector<HTMLElement>("#penna-root");
@@ -42,10 +45,50 @@ function getExportRoot(): HTMLElement {
 
   const shell = document.createElement("article");
   shell.id = "penna-export";
-  shell.className = appRoot.className;
+  shell.className = appRoot.className.replace(/\bpenna-dark\b/g, "").trim();
   shell.appendChild(render.cloneNode(true));
   return shell;
 }
+
+/**
+ * 导出壳的排版。HTML 导出与 PDF 打印必须共用同一份，
+ * 否则两边的宽度 / 内边距会漂，导出结果和预览对不上。
+ */
+const EXPORT_SHELL_CSS = `
+    #penna-export {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 100%;
+      background: color-mix(in srgb, var(--penna-c-text-3) 8%, var(--penna-c-bg));
+    }`;
+
+/**
+ * 打印态覆盖，同样两边共用。
+ * 不指定 `@page size`：纸张由用户在打印对话框里选，这里不能替他决定。
+ */
+const EXPORT_PRINT_CSS = `
+      @page {
+        margin: 12mm;
+      }
+      html, body {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        position: static !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #penna-export {
+        max-width: none !important;
+        margin: 0 !important;
+        min-height: auto !important;
+      }`;
 
 function buildExportHtml(title: string, root: HTMLElement): string {
   const styles = collectDocumentStyles();
@@ -64,24 +107,10 @@ function buildExportHtml(title: string, root: HTMLElement): string {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    #penna-export {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 24px;
-      box-sizing: border-box;
-      width: 100%;
-      min-height: 100%;
-      background: color-mix(in srgb, var(--penna-c-text-3) 8%, var(--penna-c-bg));
-    }
+${EXPORT_SHELL_CSS}
     ${styles}
     @media print {
-      html, body {
-        height: auto !important;
-        overflow: visible !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      #penna-export { max-width: none !important; }
+${EXPORT_PRINT_CSS}
     }
   </style>
 </head>
@@ -121,104 +150,60 @@ export async function exportHtml(docPath: string | null): Promise<boolean> {
   return true;
 }
 
-export async function exportPdf(docPath: string | null): Promise<void> {
-  const title = docPath ? basename(docPath) : "Penna Markdown";
-  const html = buildExportHtml(title, getExportRoot());
+export async function exportPdf(): Promise<void> {
+  // 上一次打印若没收到 afterprint，残留节点会和本次内容叠加
+  document.getElementById("penna-export")?.remove();
+  document.getElementById("penna-print-isolation")?.remove();
 
-  // 1. 创建 iframe 承载注入的 html（实现绝对的 CSS 隔离）
-  const iframe = document.createElement("iframe");
-  iframe.id = "penna-print-iframe";
-  iframe.setAttribute("scrolling", "no");
-  iframe.style.position = "absolute";
-  iframe.style.top = "-9999px";
-  iframe.style.left = "-9999px";
-  iframe.style.width = "100%";
-  iframe.style.border = "none";
-  iframe.style.zIndex = "-1";
-  document.body.appendChild(iframe);
+  const exportRoot = getExportRoot();
+  document.body.appendChild(exportRoot);
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    document.body.removeChild(iframe);
-    throw new Error("无法创建打印沙箱");
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  const images = Array.from(doc.querySelectorAll("img"));
-  await Promise.all(images.map((img) => {
-    img.removeAttribute("loading");
-    if (img.complete) return Promise.resolve();
-    return new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-  }));
-
-  // 等待渲染和图片解析
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // 2. 核心：为了让宿主打印时能正常多页切割 iframe，必须把 iframe 的物理高度撑开至内容总高度
-  const body = doc.body;
-  const htmlEl = doc.documentElement;
-  const contentHeight = Math.max(
-    body.scrollHeight, body.offsetHeight,
-    htmlEl.clientHeight, htmlEl.scrollHeight, htmlEl.offsetHeight
-  );
-
-  // 3. 在主文档注入 @media print 隔离样式
   const style = document.createElement("style");
   style.id = "penna-print-isolation";
   style.textContent = `
     @media screen {
-      #penna-print-iframe { display: none !important; }
+      #penna-export { display: none !important; }
     }
+${EXPORT_SHELL_CSS}
     @media print {
-      /* 重置宿主高度限制，允许分页 */
-      html, body {
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        position: static !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important;
-      }
-      /* 隐藏所有原生 UI，只保留 iframe 和隔离样式表 */
-      body > *:not(#penna-print-iframe):not(#penna-print-isolation) {
+      /* 只留导出壳，编辑器 UI 全部退场 */
+      body > *:not(#penna-export) {
         display: none !important;
       }
-      /* 将 iframe 暴露给系统打印机，并应用实际高度 */
-      #penna-print-iframe {
-        display: block !important;
-        position: static !important;
-        width: 100% !important;
-        height: ${contentHeight}px !important;
-      }
+      #penna-export { display: block !important; }
+${EXPORT_PRINT_CSS}
     }
   `;
-  document.body.appendChild(style);
+  document.head.appendChild(style);
 
+  const images = Array.from(exportRoot.querySelectorAll("img"));
+  await Promise.all(images.map((img) => {
+    img.removeAttribute("loading");
+    if (img.complete) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+    });
+  }));
+
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  // 不能用定时器兜底：打印预览里改纸张 / 边距会按当前 DOM 重新排版，
+  // 提前拆掉节点会让最终 PDF 和预览不一致。残留交给下次导出开头清。
   const cleanup = () => {
     window.removeEventListener("afterprint", cleanup);
-    if (document.body.contains(iframe)) {
-      document.body.removeChild(iframe);
-    }
-    if (document.body.contains(style)) {
-      document.body.removeChild(style);
-    }
+    exportRoot.remove();
+    style.remove();
   };
 
-  // 绑定在宿主 window 上，因为我们要调用的是宿主的打印
   window.addEventListener("afterprint", cleanup);
 
   try {
-    // 4. 不再调用 iframe.print()，而是用 Tauri 的原生打印打印宿主
-    // 因为宿主已被 @media print 劫持，实际上只会打印 iframe 里的内容
     await invoke("print_window");
-
   } catch (e) {
     cleanup();
     throw new Error(String(e));

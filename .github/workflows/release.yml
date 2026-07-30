@@ -6,7 +6,34 @@ on:
   workflow_dispatch:
 
 jobs:
+  # tag 是手打的，永远在版本号体系之外。不一致时必须立刻失败：
+  # 否则 tauri-action 会按旧版本号找到已存在的 release，把产物静默覆盖上去。
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag 必须与 package.json 版本号一致
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            echo "非 tag 触发，跳过校验"
+            exit 0
+          fi
+
+          PKG="$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME#v}"
+
+          if [[ "${PKG}" != "${TAG}" ]]; then
+            echo "::error::tag v${TAG} 与 package.json 的 ${PKG} 不一致，发布中止"
+            exit 1
+          fi
+          echo "版本一致：${PKG}"
+
   publish-tauri:
+    needs: verify-version
     permissions:
       contents: write
     strategy:

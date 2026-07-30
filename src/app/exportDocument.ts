@@ -54,9 +54,10 @@ function getExportRoot(): HTMLElement {
  * 导出壳的排版。HTML 导出与 PDF 打印必须共用同一份，
  * 否则两边的宽度 / 内边距会漂，导出结果和预览对不上。
  */
-const EXPORT_SHELL_CSS = `
+function exportShellCss(maxWidth: number): string {
+  return `
     #penna-export {
-      max-width: 800px;
+      max-width: ${maxWidth}px;
       margin: 0 auto;
       padding: 24px;
       box-sizing: border-box;
@@ -64,6 +65,7 @@ const EXPORT_SHELL_CSS = `
       min-height: 100%;
       background: color-mix(in srgb, var(--penna-c-text-3) 8%, var(--penna-c-bg));
     }`;
+}
 
 /**
  * 打印态覆盖，同样两边共用。
@@ -90,7 +92,11 @@ const EXPORT_PRINT_CSS = `
         min-height: auto !important;
       }`;
 
-function buildExportHtml(title: string, root: HTMLElement): string {
+function buildExportHtml(
+  title: string,
+  root: HTMLElement,
+  maxWidth: number,
+): string {
   const styles = collectDocumentStyles();
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -107,7 +113,7 @@ function buildExportHtml(title: string, root: HTMLElement): string {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-${EXPORT_SHELL_CSS}
+${exportShellCss(maxWidth)}
     ${styles}
     @media print {
 ${EXPORT_PRINT_CSS}
@@ -136,9 +142,12 @@ function defaultExportName(docPath: string | null, ext: string): string {
   return `export.${ext}`;
 }
 
-export async function exportHtml(docPath: string | null): Promise<boolean> {
+export async function exportHtml(
+  docPath: string | null,
+  maxWidth: number,
+): Promise<boolean> {
   const title = docPath ? basename(docPath) : "Penna Markdown";
-  const html = buildExportHtml(title, getExportRoot());
+  const html = buildExportHtml(title, getExportRoot(), maxWidth);
   const target = await save({
     defaultPath: defaultExportName(docPath, "html"),
     filters: [{ name: "HTML", extensions: ["html"] }],
@@ -150,7 +159,7 @@ export async function exportHtml(docPath: string | null): Promise<boolean> {
   return true;
 }
 
-export async function exportPdf(): Promise<void> {
+export async function exportPdf(maxWidth: number): Promise<void> {
   // 上一次打印若没收到 afterprint，残留节点会和本次内容叠加
   document.getElementById("penna-export")?.remove();
   document.getElementById("penna-print-isolation")?.remove();
@@ -164,7 +173,7 @@ export async function exportPdf(): Promise<void> {
     @media screen {
       #penna-export { display: none !important; }
     }
-${EXPORT_SHELL_CSS}
+${exportShellCss(maxWidth)}
     @media print {
       /* 只留导出壳，编辑器 UI 全部退场 */
       body > *:not(#penna-export) {

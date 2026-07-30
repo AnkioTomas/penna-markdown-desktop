@@ -73,7 +73,6 @@ const SKIP_VALUES = new Set([
 
 const JUNK_SELECTORS = [
   ".penna-copy-code-button",
-  ".penna-code-block__gutter",
   ".penna-code-block__expand",
   "button",
   "script",
@@ -182,6 +181,32 @@ function isLocalImageSrc(src: string): boolean {
 function removeJunk(root: HTMLElement): void {
   for (const el of Array.from(root.querySelectorAll(JUNK_SELECTORS))) {
     el.remove();
+  }
+}
+
+/**
+ * 代码块每行是一个 `display:block` 的 span，DOM 里没有换行符。
+ * 微信剥掉 class 和 display，行会挤成一行；纯文本也拿不到换行。
+ * 拆掉行容器、按行补回 `\n`，行内高亮 span 原样保留。
+ *
+ * 折叠行一起带出：折叠是预览里的交互，展开按钮已被剥掉，没理由丢代码。
+ */
+function flattenCodeLines(root: HTMLElement): void {
+  for (const code of root.querySelectorAll("code[data-penna-code]")) {
+    const lines = Array.from(code.querySelectorAll(".penna-code-block__line"));
+    if (!lines.length) {
+      continue;
+    }
+    const flat = document.createDocumentFragment();
+    for (const [index, line] of lines.entries()) {
+      if (index > 0) {
+        flat.appendChild(document.createTextNode("\n"));
+      }
+      while (line.firstChild) {
+        flat.appendChild(line.firstChild);
+      }
+    }
+    code.replaceChildren(flat);
   }
 }
 
@@ -537,6 +562,7 @@ export async function copyToWechat(): Promise<CopyToWechatResult> {
     void host.offsetHeight;
 
     removeJunk(clone);
+    flattenCodeLines(clone);
     replaceCheckboxes(clone);
     const sectionStyle = rootSectionStyle(clone);
     inlineComputedStyles(clone);

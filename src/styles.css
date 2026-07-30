@@ -11,22 +11,102 @@ body {
   height: 100%;
 }
 
-/* 设置弹窗：桌面宿主自己的表单宽度 / 分组 */
+/* 设置弹窗：左侧分类导航 + 右侧表单。
+   高度写死，否则切换分类时弹窗会跟着内容长短跳动。 */
+/* flex: none 是必须的：库里 .penna-dialog-form 带 flex:1（basis 0%），
+   会让 height 失效，弹窗高度重新跟着内容长短变。 */
 .penna-dialog-form--settings {
-  min-width: min(560px, 92vw);
-  width: min(640px, 92vw);
-  max-height: 90vh;
+  flex: none;
+  width: min(800px, 94vw);
+  height: min(620px, 88vh);
 }
 
-.penna-dialog-form--settings .penna-dialog-section {
-  margin-top: 8px;
+.penna-settings-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid color-mix(in srgb, var(--penna-c-text-3) 15%, transparent);
+}
+
+.penna-settings-nav {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border-right: 1px solid color-mix(in srgb, var(--penna-c-text-3) 15%, transparent);
+  background: color-mix(in srgb, var(--penna-c-text-3) 5%, transparent);
+}
+
+.penna-settings-nav-item {
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--penna-c-text-2);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.penna-settings-nav-item:hover {
+  background: color-mix(in srgb, var(--penna-c-text-1) 6%, transparent);
   color: var(--penna-c-text-1);
 }
 
-.penna-dialog-form--settings .penna-dialog-section:first-child {
-  margin-top: 0;
+.penna-settings-nav-item.is-active {
+  background: color-mix(in srgb, var(--penna-c-brand-1) 14%, transparent);
+  color: var(--penna-c-brand-1);
+}
+
+.penna-settings-pages {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+
+.penna-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.penna-settings-page[hidden] {
+  display: none;
+}
+
+.penna-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.penna-settings-group + .penna-settings-group {
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--penna-c-text-3) 12%, transparent);
+}
+
+.penna-settings-group-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--penna-c-text-1);
+}
+
+/* 字段名要压得住说明文字，否则两行糊成一片 */
+.penna-dialog-form--settings .penna-dialog-field {
+  gap: 5px;
+  font-weight: 600;
+  color: var(--penna-c-text-1);
+}
+
+.penna-dialog-form--settings .penna-dialog-table-hint {
+  font-weight: 400;
 }
 
 .penna-dialog-form--settings .penna-dialog-field input:not([type="checkbox"]),
@@ -38,16 +118,27 @@ body {
 
 .penna-dialog-field--check {
   flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .penna-dialog-field--check input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  margin: 0;
+  margin: 1px 0 0;
   flex-shrink: 0;
+}
+
+/* 勾选框的说明必须换行到标题下方，和标题挤一行等于没写 */
+.penna-settings-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.penna-dialog-field--check:has(input:disabled) {
+  opacity: 0.5;
 }
 
 /* macOS WKWebView 原生 select 不吃 border/background，设置弹窗里补一下 */

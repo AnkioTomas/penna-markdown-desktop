@@ -4,6 +4,7 @@ import {
   type PennaOptions,
   type EditorOptions,
   type SideBarOptions,
+  type SyntaxOptions,
   type ToolbarItem,
 } from "penna-markdown";
 import "penna-markdown/editor.css";
@@ -38,6 +39,8 @@ interface PennaBoot {
   statusbar: boolean;
   sidebar: boolean;
   lineNumbers: boolean;
+  previewMaxWidth: number;
+  syntaxOptions: SyntaxOptions;
   uploadEnabled: boolean;
   aiEnabled: boolean;
 }
@@ -122,8 +125,37 @@ export class PennaDesktopApp {
       statusbar: this.config.getItem<boolean>("ui.statusbar", true),
       sidebar: this.config.getItem<boolean>("ui.sidebar", true),
       lineNumbers: this.config.getItem<boolean>("ui.lineNumbers", true),
+      previewMaxWidth: this.config.getItem<number>("ui.previewMaxWidth", 800),
+      syntaxOptions: this.buildSyntaxOptions(),
       uploadEnabled: this.isUploadEnabled(),
       aiEnabled: this.config.getItem<boolean>("ai.enabled", false),
+    };
+  }
+
+  /**
+   * 远程渲染服务地址：空串不是有效值。
+   * 库内是 `!= null` 兜底内置地址，传空串会拼出坏 URL，必须退化成 undefined。
+   */
+  private apiHost(key: string): string | undefined {
+    return this.config.getItem<string>(key, "").trim() || undefined;
+  }
+
+  private buildSyntaxOptions(): SyntaxOptions {
+    return {
+      code: {
+        enhanced: this.config.getItem<boolean>("render.codeEnhanced", true),
+        lineNumbers: this.config.getItem<boolean>(
+          "render.codeLineNumbers",
+          true,
+        ),
+        wrap: this.config.getItem<boolean>("render.codeWrap", false),
+        mermaidApiHost: this.apiHost("render.mermaidApiHost"),
+        echartsApiHost: this.apiHost("render.echartsApiHost"),
+      },
+      atx_heading: {
+        slug: this.config.getItem<boolean>("render.headingSlug", true),
+      },
+      math_block: { apiHost: this.apiHost("render.mathApiHost") },
     };
   }
 
@@ -231,7 +263,8 @@ export class PennaDesktopApp {
       // 核心改造：弃用 Web 端工具栏，由 Tauri 原生系统菜单完全接管格式化操作
       toolbar: false,
       preview: {
-        maxWidth: "800px",
+        maxWidth: `${boot.previewMaxWidth}px`,
+        transformerEngineOptions: { syntaxOptions: boot.syntaxOptions },
       },
       editor: this.buildEditorOptions(boot),
     };
@@ -612,7 +645,10 @@ export class PennaDesktopApp {
   private async handleExportHtml(): Promise<void> {
     this.syncFromEditor();
     try {
-      const ok = await exportHtml(this.session.getPath());
+      const ok = await exportHtml(
+        this.session.getPath(),
+        this.config.getItem<number>("ui.previewMaxWidth", 800),
+      );
       if (ok) {
         await message("HTML 已导出", { title: "导出成功", kind: "info" });
       }
@@ -628,7 +664,7 @@ export class PennaDesktopApp {
   private async handleExportPdf(): Promise<void> {
     this.syncFromEditor();
     try {
-      await exportPdf();
+      await exportPdf(this.config.getItem<number>("ui.previewMaxWidth", 800));
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       await message(`导出 PDF 失败: ${msg}`, {

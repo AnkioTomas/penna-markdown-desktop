@@ -28,6 +28,16 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
   "ui.statusbar": true,
   "ui.sidebar": true,
   "ui.lineNumbers": true,
+  /** 预览与导出正文的最大宽度（px），两处必须同源否则导出物和预览对不上 */
+  "ui.previewMaxWidth": 800,
+  "render.codeEnhanced": true,
+  "render.codeLineNumbers": true,
+  "render.codeWrap": false,
+  "render.headingSlug": true,
+  /** 公式 / 图表走远程渲染服务；空串表示用库内置地址 */
+  "render.mathApiHost": "",
+  "render.mermaidApiHost": "",
+  "render.echartsApiHost": "",
   "upload.mode": "off",
   "upload.directory": "assets",
   "upload.script": "",

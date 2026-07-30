@@ -1,9 +1,4 @@
 [[permission]]
-identifier = "allow-get-env"
-description = "Read process environment variables"
-commands.allow = ["get_env"]
-
-[[permission]]
 identifier = "allow-get-startup-files"
 description = "Read markdown paths passed on process start"
 commands.allow = ["get_startup_files"]

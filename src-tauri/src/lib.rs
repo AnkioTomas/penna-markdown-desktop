@@ -187,11 +187,14 @@ pub fn run() {
         if paths.is_empty() {
           return;
         }
-        // 冷启动：窗口/前端可能还不在，必须先入队。
+        // 两条路都要走，不能二选一：窗口在 build() 阶段就建好了，这里拿到的永远是
+        // Some，但前端可能还没注册 `open-files` 监听，emit 会直接丢。真正决定走哪条
+        // 的是前端就绪与否，而这里观察不到。
+        // 冷启动：入队，等前端起来调 get_startup_files 取走。
         if let Ok(mut pending) = app.state::<PendingOpenFiles>().0.lock() {
           pending.extend(paths.iter().cloned());
         }
-        // 热启动：窗口已在则立刻推给前端。
+        // 热启动：前端已就绪，emit 立刻生效；队列里的副本随进程一起消失。
         if let Some(window) = app.get_webview_window("main") {
           let _ = window.emit("open-files", paths);
         }

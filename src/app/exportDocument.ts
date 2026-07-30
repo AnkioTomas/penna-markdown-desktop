@@ -1,7 +1,14 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { basename } from "../host/path";
+import { basename, dirname, join } from "../host/path";
+
+/**
+ * index.html 里写死的标题。打印时要临时借用 `document.title`，用它还原。
+ * 不能在导出时现场保存旧值：`afterprint` 万一没来（下面那两行残留清理说明这事发生过），
+ * 下次导出就会把文档名当成「原标题」记住，标题从此漂着回不来。
+ */
+const APP_TITLE = document.title;
 
 /**
  * 收集页面全部可用 CSS。
@@ -134,12 +141,12 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function defaultExportName(docPath: string | null, ext: string): string {
-  if (docPath) {
-    const name = basename(docPath).replace(/\.(md|markdown)$/i, "");
-    return `${name || "export"}.${ext}`;
+/** 导出物的文件名主干：去掉 Markdown 扩展名的文档名 */
+function exportBaseName(docPath: string | null): string {
+  if (!docPath) {
+    return "export";
   }
-  return `export.${ext}`;
+  return basename(docPath).replace(/\.(md|markdown)$/i, "") || "export";
 }
 
 export async function exportHtml(
@@ -148,8 +155,10 @@ export async function exportHtml(
 ): Promise<boolean> {
   const title = docPath ? basename(docPath) : "Penna Markdown";
   const html = buildExportHtml(title, getExportRoot(), maxWidth);
+  const fileName = `${exportBaseName(docPath)}.html`;
   const target = await save({
-    defaultPath: defaultExportName(docPath, "html"),
+    // 带上目录，默认落在文档旁边
+    defaultPath: docPath ? join(dirname(docPath), fileName) : fileName,
     filters: [{ name: "HTML", extensions: ["html"] }],
   });
   if (!target) {
@@ -159,10 +168,17 @@ export async function exportHtml(
   return true;
 }
 
-export async function exportPdf(maxWidth: number): Promise<void> {
+export async function exportPdf(
+  docPath: string | null,
+  maxWidth: number,
+): Promise<void> {
   // 上一次打印若没收到 afterprint，残留节点会和本次内容叠加
   document.getElementById("penna-export")?.remove();
   document.getElementById("penna-print-isolation")?.remove();
+
+  // 打印对话框「存储为 PDF」的默认文件名取自 document.title。
+  // 窗口标题走的是 Tauri 原生 setTitle，和这里不是一回事，所以得自己借用。
+  document.title = exportBaseName(docPath);
 
   const exportRoot = getExportRoot();
   document.body.appendChild(exportRoot);
@@ -205,6 +221,7 @@ ${EXPORT_PRINT_CSS}
   // 提前拆掉节点会让最终 PDF 和预览不一致。残留交给下次导出开头清。
   const cleanup = () => {
     window.removeEventListener("afterprint", cleanup);
+    document.title = APP_TITLE;
     exportRoot.remove();
     style.remove();
   };

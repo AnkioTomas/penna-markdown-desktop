@@ -8,7 +8,7 @@ import { BaseUploader, type UploadResult } from "./BaseUploader";
 export class LocalUploader extends BaseUploader {
   async upload(tempPath: string, originalName: string): Promise<UploadResult> {
     const directory = this.config
-      .getItem<string>("upload.directory", "assets")
+      .getItem<string>("upload.directory")
       .trim()
       .replace(/\\/g, "/");
     const fileName = this.uniqueFileName(originalName);

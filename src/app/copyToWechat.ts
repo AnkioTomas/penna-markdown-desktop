@@ -365,13 +365,12 @@ function reinforceAlerts(root: HTMLElement): void {
         ? cs.borderLeftColor
         : cs.color || "rgb(9, 105, 218)",
     );
-    const thin = toOpaqueCssColor(accent);
 
     el.style.backgroundColor = bg;
     el.style.color = cs.color;
-    el.style.borderTop = `1px solid ${thin}`;
-    el.style.borderRight = `1px solid ${thin}`;
-    el.style.borderBottom = `1px solid ${thin}`;
+    el.style.borderTop = `1px solid ${accent}`;
+    el.style.borderRight = `1px solid ${accent}`;
+    el.style.borderBottom = `1px solid ${accent}`;
     el.style.borderLeft = `4px solid ${accent}`;
     el.style.borderRadius =
       cs.borderRadius && cs.borderRadius !== "0px" ? cs.borderRadius : "6px";

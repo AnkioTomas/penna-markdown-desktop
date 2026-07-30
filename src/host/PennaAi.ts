@@ -171,18 +171,18 @@ export class PennaAi {
     onUpdate?: AiOnUpdate,
     signal?: AbortSignal,
   ): Promise<string> {
-    if (!this.config.getItem<boolean>("ai.enabled", false)) {
+    if (!this.config.getItem<boolean>("ai.enabled")) {
       throw new Error("AI 未启用");
     }
 
     const { endpoint, model, preset } = this.resolveEndpointAndModel();
-    const apiKey = await this.resolveApiKey();
+    const apiKey = this.config.getItem<string>("ai.apiKey").trim();
     const system = this.resolveSystemPrompt(action);
     const userContent = this.buildUserMessage(action, text, prompts);
     const temperature = this.resolveTemperature(action);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...this.config.getItem<Record<string, string>>("ai.headers", {}),
+      ...this.config.getItem<Record<string, string>>("ai.headers"),
     };
     if (apiKey && !headers.Authorization && !headers.authorization) {
       headers.Authorization = `Bearer ${apiKey}`;
@@ -190,10 +190,10 @@ export class PennaAi {
 
     // 三层：内置供应商参数 → 用户自填 `ai.body`（可覆盖内置）→ 应用不变量（不可覆盖）
     const body: Record<string, unknown> = {
-      ...(this.config.getItem<boolean>("ai.thinking", true)
+      ...(this.config.getItem<boolean>("ai.thinking")
         ? undefined
         : preset.thinkingOff),
-      ...this.config.getItem<Record<string, unknown>>("ai.body", {}),
+      ...this.config.getItem<Record<string, unknown>>("ai.body"),
       model,
       messages: [
         { role: "system", content: system },
@@ -356,12 +356,12 @@ export class PennaAi {
     model: string;
     preset: AiProviderPreset;
   } {
-    const provider = this.config.getItem<AiProvider>("ai.provider", "openai");
-    const preset = AI_PROVIDERS[provider] ?? AI_PROVIDERS.custom;
+    const provider = this.config.getItem<AiProvider>("ai.provider");
+    const preset = AI_PROVIDERS[provider];
     const endpoint =
-      this.config.getItem<string>("ai.endpoint", "").trim() || preset.endpoint;
+      this.config.getItem<string>("ai.endpoint").trim() || preset.endpoint;
     const model =
-      this.config.getItem<string>("ai.model", "").trim() || preset.defaultModel;
+      this.config.getItem<string>("ai.model").trim() || preset.defaultModel;
 
     if (!endpoint) {
       throw new Error(
@@ -377,14 +377,11 @@ export class PennaAi {
     return { endpoint, model, preset };
   }
 
-  private async resolveApiKey(): Promise<string> {
-    return this.config.getItem<string>("ai.apiKey", "").trim();
-  }
-
   private resolveSystemPrompt(action: string): string {
+    // action 由编辑器传入，未必是已知的五个之一，这个 key 可能根本不在配置表里
     const override = this.config
-      .getItem<string>(`ai.prompt.${action as AiActionId}`, "")
-      .trim();
+      .getItem<string | undefined>(`ai.prompt.${action as AiActionId}`)
+      ?.trim();
     if (override) {
       return override;
     }
@@ -395,7 +392,7 @@ export class PennaAi {
   }
 
   private resolveTemperature(action: string): number {
-    const configured = this.config.getItem<number>("ai.temperature", -1);
+    const configured = this.config.getItem<number>("ai.temperature");
     if (configured >= 0) {
       return configured;
     }

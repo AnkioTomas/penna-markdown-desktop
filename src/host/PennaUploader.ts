@@ -26,7 +26,7 @@ export class PennaUploader {
   ) {}
 
   public async upload(request: UploadRequest): Promise<UploadResult> {
-    const mode = this.config.getItem<UploadMode>("upload.mode", "off");
+    const mode = this.config.getItem<UploadMode>("upload.mode");
     if (mode === "off") {
       throw new Error("文件上传已禁用");
     }
@@ -36,8 +36,10 @@ export class PennaUploader {
 
     const uploader = this.createUploader(mode);
     const root = await tempDir();
+    // 目录名已经唯一，里面的文件只要文件系统安全、保住扩展名即可
     const tmpDir = join(root, `penna-upload-${Date.now()}`);
-    const fileName = this.uniqueFileName(request.name);
+    const fileName =
+      request.name.replace(/[^\w.\-\u4e00-\u9fff]+/g, "_") || "file";
     const tmpFile = join(tmpDir, fileName);
 
     try {
@@ -63,12 +65,5 @@ export class PennaUploader {
         throw new Error(`未知上传模式: ${String(mode)}`);
       }
     }
-  }
-
-  private uniqueFileName(name: string): string {
-    const ext = name.includes(".") ? `.${name.split(".").pop()}` : "";
-    const base = name.replace(/\.[^.]+$/, "") || "file";
-    const safe = base.replace(/[^\w.\-\u4e00-\u9fff]+/gi, "_");
-    return `${safe}-${Date.now()}${ext}`;
   }
 }

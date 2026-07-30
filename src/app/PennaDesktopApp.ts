@@ -102,33 +102,31 @@ export class PennaDesktopApp {
 
 
   private isUploadEnabled(): boolean {
-    const mode = this.config.getItem<UploadMode>("upload.mode", "off");
+    const mode = this.config.getItem<UploadMode>("upload.mode");
     if (mode === "off") {
       return false;
     }
     if (mode === "script") {
-      return Boolean(this.config.getItem<string>("upload.script", "").trim());
+      return Boolean(this.config.getItem<string>("upload.script").trim());
     }
     return true;
   }
 
   private buildBoot(): PennaBoot {
-    const appearanceMode = this.config.getItem<AppearanceMode>(
-      "ui.appearance",
-      "auto",
-    );
     return {
       text: this.session.getText(),
-      appearance: resolveAppearance(appearanceMode),
-      layout: this.config.getItem<string>("ui.layout", "split"),
-      theme: this.config.getItem<string>("ui.theme", "default"),
-      statusbar: this.config.getItem<boolean>("ui.statusbar", true),
-      sidebar: this.config.getItem<boolean>("ui.sidebar", true),
-      lineNumbers: this.config.getItem<boolean>("ui.lineNumbers", true),
-      previewMaxWidth: this.config.getItem<number>("ui.previewMaxWidth", 800),
+      appearance: resolveAppearance(
+        this.config.getItem<AppearanceMode>("ui.appearance"),
+      ),
+      layout: this.config.getItem<string>("ui.layout"),
+      theme: this.config.getItem<string>("ui.theme"),
+      statusbar: this.config.getItem<boolean>("ui.statusbar"),
+      sidebar: this.config.getItem<boolean>("ui.sidebar"),
+      lineNumbers: this.config.getItem<boolean>("ui.lineNumbers"),
+      previewMaxWidth: this.config.getItem<number>("ui.previewMaxWidth"),
       syntaxOptions: this.buildSyntaxOptions(),
       uploadEnabled: this.isUploadEnabled(),
-      aiEnabled: this.config.getItem<boolean>("ai.enabled", false),
+      aiEnabled: this.config.getItem<boolean>("ai.enabled"),
     };
   }
 
@@ -137,23 +135,20 @@ export class PennaDesktopApp {
    * 库内是 `!= null` 兜底内置地址，传空串会拼出坏 URL，必须退化成 undefined。
    */
   private apiHost(key: string): string | undefined {
-    return this.config.getItem<string>(key, "").trim() || undefined;
+    return this.config.getItem<string>(key).trim() || undefined;
   }
 
   private buildSyntaxOptions(): SyntaxOptions {
     return {
       code: {
-        enhanced: this.config.getItem<boolean>("render.codeEnhanced", true),
-        lineNumbers: this.config.getItem<boolean>(
-          "render.codeLineNumbers",
-          true,
-        ),
-        wrap: this.config.getItem<boolean>("render.codeWrap", false),
+        enhanced: this.config.getItem<boolean>("render.codeEnhanced"),
+        lineNumbers: this.config.getItem<boolean>("render.codeLineNumbers"),
+        wrap: this.config.getItem<boolean>("render.codeWrap"),
         mermaidApiHost: this.apiHost("render.mermaidApiHost"),
         echartsApiHost: this.apiHost("render.echartsApiHost"),
       },
       atx_heading: {
-        slug: this.config.getItem<boolean>("render.headingSlug", true),
+        slug: this.config.getItem<boolean>("render.headingSlug"),
       },
       math_block: { apiHost: this.apiHost("render.mathApiHost") },
     };
@@ -530,17 +525,16 @@ export class PennaDesktopApp {
   private bindAppearanceWatcher(): void {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      const mode = this.config.getItem<AppearanceMode>("ui.appearance", "auto");
-      if (mode !== "auto") {
+      if (this.config.getItem<AppearanceMode>("ui.appearance") !== "auto") {
         return;
       }
-      this.editor?.theme.setLightDark(resolveAppearance(mode));
+      this.editor?.theme.setLightDark(resolveAppearance("auto"));
     };
     media.addEventListener("change", apply);
   }
 
   private async applyWindowTheme(): Promise<void> {
-    const mode = this.config.getItem<AppearanceMode>("ui.appearance", "auto");
+    const mode = this.config.getItem<AppearanceMode>("ui.appearance");
     try {
       await getCurrentWindow().setTheme(mode === "auto" ? null : mode);
     } catch (error) {
@@ -647,7 +641,7 @@ export class PennaDesktopApp {
     try {
       const ok = await exportHtml(
         this.session.getPath(),
-        this.config.getItem<number>("ui.previewMaxWidth", 800),
+        this.config.getItem<number>("ui.previewMaxWidth"),
       );
       if (ok) {
         await message("HTML 已导出", { title: "导出成功", kind: "info" });
@@ -664,7 +658,7 @@ export class PennaDesktopApp {
   private async handleExportPdf(): Promise<void> {
     this.syncFromEditor();
     try {
-      await exportPdf(this.config.getItem<number>("ui.previewMaxWidth", 800));
+      await exportPdf(this.config.getItem<number>("ui.previewMaxWidth"));
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       await message(`导出 PDF 失败: ${msg}`, {

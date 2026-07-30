@@ -1,5 +1,5 @@
 import { message } from "@tauri-apps/plugin-dialog";
-import type { AiProvider, PennaConfig, UploadMode } from "../host/PennaConfig";
+import type { AiProvider, PennaConfig } from "../host/PennaConfig";
 import {
   AI_ACTION_PROMPTS,
   AI_ACTION_TEMPERATURE,
@@ -288,18 +288,17 @@ const SECTIONS: Section[] = [
             ),
             hint: "决定下面两项留空时使用的预设",
           },
+          // placeholder 由 bindProviderFields 按当前供应商实时填
           {
             key: "ai.endpoint",
             label: "Endpoint",
             type: "text",
-            emptyMeans: "", // 运行时按供应商填充
             hint: "留空使用供应商预设",
           },
           {
             key: "ai.model",
             label: "模型",
             type: "text",
-            emptyMeans: "",
             hint: "留空使用供应商默认模型",
           },
           {
@@ -375,45 +374,17 @@ const SECTIONS: Section[] = [
 
 function storedValue(config: PennaConfig, field: Field): string | boolean {
   if (field.type === "checkbox") {
-    return config.getItem<boolean>(field.key, false);
+    return config.getItem<boolean>(field.key);
   }
   if (field.type === "json") {
-    const value = config.getItem<Record<string, unknown>>(field.key, {});
+    const value = config.getItem<Record<string, unknown>>(field.key);
     // 空对象显示为空框，别让用户对着一个 {} 猜要不要删
     return Object.keys(value).length ? JSON.stringify(value, null, 2) : "";
   }
   if (field.type === "number") {
-    return String(config.getItem<number>(field.key, 0));
+    return String(config.getItem<number>(field.key));
   }
-  return String(config.getItem<string>(field.key, ""));
-}
-
-function providerPreset(config: PennaConfig): {
-  endpoint: string;
-  defaultModel: string;
-} {
-  const provider = config.getItem<AiProvider>("ai.provider", "openai");
-  return AI_PROVIDERS[provider] ?? AI_PROVIDERS.custom;
-}
-
-function resolveEmptyMeans(
-  field: Field,
-  config: PennaConfig,
-): string | undefined {
-  if (
-    field.type === "select" ||
-    field.type === "checkbox" ||
-    field.type === "json"
-  ) {
-    return undefined;
-  }
-  if (field.key === "ai.endpoint") {
-    return providerPreset(config).endpoint || "自定义供应商需手动填写";
-  }
-  if (field.key === "ai.model") {
-    return providerPreset(config).defaultModel || "自定义供应商需手动填写";
-  }
-  return field.emptyMeans;
+  return String(config.getItem<string>(field.key));
 }
 
 function renderFields(fields: Field[], config: PennaConfig): string {
@@ -452,7 +423,7 @@ function renderFields(fields: Field[], config: PennaConfig): string {
       const builtinAttr = builtin
         ? ` data-builtin="${escapeHtml(builtin)}"`
         : "";
-      const placeholderText = builtin || resolveEmptyMeans(field, config) || "";
+      const placeholderText = builtin || field.emptyMeans || "";
       const placeholder = placeholderText
         ? ` placeholder="${escapeHtml(placeholderText)}"`
         : "";
@@ -562,10 +533,6 @@ function readValues(root: HTMLElement): Record<string, unknown> {
     }
     values[key] = value;
   }
-
-  if (typeof values["upload.mode"] === "string") {
-    values["upload.mode"] = values["upload.mode"] as UploadMode;
-  }
   return values;
 }
 
@@ -611,12 +578,9 @@ function bindProviderFields(root: HTMLElement): void {
   }
 
   const sync = () => {
-    const preset =
-      AI_PROVIDERS[providerSelect.value as AiProvider] ?? AI_PROVIDERS.custom;
-    endpointInput.placeholder =
-      preset.endpoint || "自定义供应商需手动填写";
-    modelInput.placeholder =
-      preset.defaultModel || "自定义供应商需手动填写";
+    const preset = AI_PROVIDERS[providerSelect.value as AiProvider];
+    endpointInput.placeholder = preset.endpoint || "自定义供应商需手动填写";
+    modelInput.placeholder = preset.defaultModel || "自定义供应商需手动填写";
     if (thinkingInput) {
       thinkingInput.disabled = !preset.thinkingOff;
     }

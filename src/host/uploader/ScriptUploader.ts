@@ -40,17 +40,14 @@ function splitCommand(input: string): string[] {
  */
 export class ScriptUploader extends BaseUploader {
   async upload(tempPath: string, originalName: string): Promise<UploadResult> {
-    const script = this.config.getItem<string>("upload.script", "").trim();
+    const script = this.config.getItem<string>("upload.script").trim();
     if (!script) {
       throw new Error("未配置 upload.script");
     }
 
-    const scriptPath = this.resolveConfiguredPath(script);
-    const parts = splitCommand(scriptPath);
-    const command = parts[0];
+    const parts = splitCommand(script);
     const args = [...parts.slice(1), tempPath];
-    
-    const { stdout, stderr } = await this.runCommand(command, args);
+    const { stdout, stderr } = await this.runCommand(parts[0], args);
     return this.parseTyporaOutput(stdout, stderr, originalName);
   }
 

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { PennaConfig } from "../PennaConfig";
-import { basename, extname, isAbsolute, resolve } from "../path";
+import { basename, extname } from "../path";
 
 export interface UploadResult {
   url: string;
@@ -19,20 +19,13 @@ export abstract class BaseUploader {
   abstract upload(tempPath: string, originalName: string): Promise<UploadResult>;
 
   protected get timeoutMs(): number {
-    return Math.max(
-      1000,
-      this.config.getItem<number>("upload.timeoutMs", 60_000),
-    );
+    return Math.max(1000, this.config.getItem<number>("upload.timeoutMs"));
   }
 
   protected get documentDir(): string {
     const normalized = this.documentPath.replace(/\\/g, "/");
     const idx = normalized.lastIndexOf("/");
     return idx <= 0 ? normalized : normalized.slice(0, idx);
-  }
-
-  protected resolveConfiguredPath(configured: string): string {
-    return configured.trim();
   }
 
   /** 走自定义 `run_command`：用户配置的路径是任意的，shell scope 罩不住。 */

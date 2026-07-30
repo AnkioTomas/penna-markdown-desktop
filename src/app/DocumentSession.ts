@@ -7,16 +7,8 @@ import { basename, dirname, join } from "../host/path";
 
 const UNTITLED = "Untitled.md";
 
-export type DocumentListener = () => void;
-
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
-}
-
-function isInsideRoot(root: string, filePath: string): boolean {
-  const r = normalizePath(root);
-  const f = normalizePath(filePath);
-  return f === r || f.startsWith(`${r}/`);
 }
 
 function isMarkdownName(name: string): boolean {
@@ -49,22 +41,9 @@ export class DocumentSession {
   private folderRoot: string | null = null;
   private text = "";
   private raw = "";
-  private readonly listeners = new Set<DocumentListener>();
-
-  onChange(listener: DocumentListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
 
   getPath(): string | null {
     return this.path;
-  }
-
-  getDir(): string | null {
-    if (this.path) {
-      return dirname(this.path);
-    }
-    return this.folderRoot;
   }
 
   getFolderRoot(): string | null {
@@ -81,7 +60,7 @@ export class DocumentSession {
 
   setText(text: string): void {
     this.text = text;
-    this.emit();
+    void this.refreshTitle();
   }
 
   async newDocument(): Promise<boolean> {
@@ -93,7 +72,7 @@ export class DocumentSession {
     this.raw = "";
     this.text = "";
     this.updateBaseHref(null);
-    this.emit();
+    void this.refreshTitle();
     return true;
   }
 
@@ -117,7 +96,7 @@ export class DocumentSession {
     this.raw = "";
     this.text = "";
     this.updateBaseHref(picked);
-    this.emit();
+    void this.refreshTitle();
     return true;
   }
 
@@ -179,7 +158,7 @@ export class DocumentSession {
     this.raw = content;
     this.text = content;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
-    this.emit();
+    void this.refreshTitle();
     return true;
   }
 
@@ -190,7 +169,7 @@ export class DocumentSession {
     await writeTextFile(this.path, this.text);
     this.raw = this.text;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
-    this.emit();
+    void this.refreshTitle();
     return true;
   }
 
@@ -208,7 +187,7 @@ export class DocumentSession {
     this.path = target;
     this.raw = this.text;
     this.updateBaseHref(this.folderRoot ?? dirname(this.path));
-    this.emit();
+    void this.refreshTitle();
     return true;
   }
 
@@ -263,13 +242,6 @@ export class DocumentSession {
       if (entry.isFile && isMarkdownName(entry.name)) {
         out.push(full);
       }
-    }
-  }
-
-  private emit(): void {
-    void this.refreshTitle();
-    for (const listener of this.listeners) {
-      listener();
     }
   }
 }

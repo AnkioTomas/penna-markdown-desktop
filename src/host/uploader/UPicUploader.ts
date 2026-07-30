@@ -19,9 +19,7 @@ export class UPicUploader extends BaseUploader {
   }
 
   private async resolveUPic(): Promise<string> {
-    const configured = this.resolveConfiguredPath(
-      this.config.getItem<string>("upload.upicPath", ""),
-    );
+    const configured = this.config.getItem<string>("upload.upicPath").trim();
     if (configured) {
       return configured;
     }

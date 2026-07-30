@@ -54,21 +54,6 @@ export function join(...parts: string[]): string {
   return absolute ? `/${joined}` : joined;
 }
 
-export function isAbsolute(filePath: string): boolean {
-  return (
-    filePath.startsWith("/") ||
-    /^[a-zA-Z]:[\\/]/.test(filePath) ||
-    filePath.startsWith("\\\\")
-  );
-}
-
-export function resolve(base: string, maybeRelative: string): string {
-  if (isAbsolute(maybeRelative)) {
-    return maybeRelative.replace(/\\/g, "/");
-  }
-  return join(base, maybeRelative);
-}
-
 export function platform(): "darwin" | "win32" | "linux" {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes("mac")) {

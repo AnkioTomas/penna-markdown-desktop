@@ -18,9 +18,7 @@ export class PicgoUploader extends BaseUploader {
   }
 
   private async resolvePicgo(): Promise<string> {
-    const configured = this.resolveConfiguredPath(
-      this.config.getItem<string>("upload.picgoPath", ""),
-    );
+    const configured = this.config.getItem<string>("upload.picgoPath").trim();
     if (configured) {
       return configured;
     }

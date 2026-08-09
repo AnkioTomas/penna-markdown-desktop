@@ -176,7 +176,7 @@ export class PennaAi {
     }
 
     const { endpoint, model, preset } = this.resolveEndpointAndModel();
-    const apiKey = this.config.getItem<string>("ai.apiKey").trim();
+    const apiKey = (this.config.getItem<string>("ai.apiKey") || "").trim();
     const system = this.resolveSystemPrompt(action);
     const userContent = this.buildUserMessage(action, text, prompts);
     const temperature = this.resolveTemperature(action);
@@ -359,9 +359,9 @@ export class PennaAi {
     const provider = this.config.getItem<AiProvider>("ai.provider");
     const preset = AI_PROVIDERS[provider];
     const endpoint =
-      this.config.getItem<string>("ai.endpoint").trim() || preset.endpoint;
+      (this.config.getItem<string>("ai.endpoint") || "").trim() || preset.endpoint;
     const model =
-      this.config.getItem<string>("ai.model").trim() || preset.defaultModel;
+      (this.config.getItem<string>("ai.model") || "").trim() || preset.defaultModel;
 
     if (!endpoint) {
       throw new Error(

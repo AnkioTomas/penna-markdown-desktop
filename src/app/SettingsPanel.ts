@@ -138,6 +138,12 @@ const SECTIONS: Section[] = [
             type: "checkbox",
             hint: "编辑区左侧的行号，和预览区代码块的行号是两个设置",
           },
+          {
+            key: "editor.shortcuts",
+            label: "启用默认快捷键",
+            type: "checkbox",
+            hint: "加粗、标题、列表等编辑命令的快捷键；关闭后菜单加速键与编辑区内快捷键一并禁用。文件类（保存/打开）不受影响",
+          },
         ],
       },
       {

@@ -33,6 +33,8 @@ const DEFAULTS: Record<string, unknown> = {
   "ui.statusbar": true,
   "ui.sidebar": true,
   "ui.lineNumbers": true,
+  /** 默认编辑命令快捷键（与上游 DEFAULT_SHORTCUTS / 菜单 accelerator 同源） */
+  "editor.shortcuts": true,
   /** 预览与导出正文的最大宽度（px），两处必须同源否则导出物和预览对不上 */
   "ui.previewMaxWidth": 800,
   "render.codeEnhanced": true,

@@ -1,6 +1,8 @@
 import {
   Penna,
   DEFAULT_TOOLBAR_ITEMS,
+  resolveShortcuts,
+  toTauriAccelerator,
   type PennaOptions,
   type EditorOptions,
   type SideBarOptions,
@@ -39,6 +41,7 @@ interface PennaBoot {
   statusbar: boolean;
   sidebar: boolean;
   lineNumbers: boolean;
+  shortcuts: boolean;
   previewMaxWidth: number;
   syntaxOptions: SyntaxOptions;
   uploadEnabled: boolean;
@@ -74,6 +77,9 @@ export class PennaDesktopApp {
     this.root = rootEl;
     this.settings = new SettingsPanel(this.config, () => {
       this.createEditor(this.buildBoot());
+      void this.setupMenu().catch((error) => {
+        console.warn("[penna-desktop] menu setup failed", error);
+      });
     });
   }
 
@@ -123,6 +129,7 @@ export class PennaDesktopApp {
       statusbar: this.config.getItem<boolean>("ui.statusbar"),
       sidebar: this.config.getItem<boolean>("ui.sidebar"),
       lineNumbers: this.config.getItem<boolean>("ui.lineNumbers"),
+      shortcuts: this.config.getItem<boolean>("editor.shortcuts"),
       previewMaxWidth: this.config.getItem<number>("ui.previewMaxWidth"),
       syntaxOptions: this.buildSyntaxOptions(),
       uploadEnabled: this.isUploadEnabled(),
@@ -160,6 +167,7 @@ export class PennaDesktopApp {
     const editorOptions: EditorOptions = {
       value: boot.text,
       lineNumbers: boot.lineNumbers,
+      shortcuts: boot.shortcuts ? undefined : false,
     };
 
     if (boot.uploadEnabled) {
@@ -293,28 +301,11 @@ export class PennaDesktopApp {
    * 递归转换器：将 Penna Markdown 的 Web 工具栏 JSON 配置，
    * 一比一映射转换为 Tauri 的原生菜单系统（包括多级子菜单和快捷键）。
    */
-  private mapPennaToolbarToTauriItems(items: ToolbarItem[], run: (cmd: string) => () => void): any[] {
-    const ACCELERATORS: Record<string, string> = {
-      bold: "CmdOrCtrl+B",
-      italic: "CmdOrCtrl+I",
-      strikethrough: "CmdOrCtrl+Shift+X",
-      underline: "CmdOrCtrl+U",
-      code: "CmdOrCtrl+E",
-      heading1: "CmdOrCtrl+1",
-      heading2: "CmdOrCtrl+2",
-      heading3: "CmdOrCtrl+3",
-      blockquote: "CmdOrCtrl+Shift+Q",
-      unorderedList: "CmdOrCtrl+Shift+U",
-      // 不要用 Shift+O：和「打开文件夹」冲突
-      orderedList: "CmdOrCtrl+Shift+7",
-      taskList: "CmdOrCtrl+Shift+C",
-      link: "CmdOrCtrl+K",
-      image: "CmdOrCtrl+Shift+I",
-      table: "CmdOrCtrl+Shift+T",
-      math: "CmdOrCtrl+Shift+M",
-      codeBlockBasic: "CmdOrCtrl+Shift+P",
-    };
-
+  private mapPennaToolbarToTauriItems(
+    items: ToolbarItem[],
+    run: (cmd: string) => () => void,
+    accelerators: Record<string, string>,
+  ): any[] {
     const result: any[] = [];
     for (const item of items) {
       if ("type" in item && item.type === "separator") {
@@ -324,7 +315,11 @@ export class PennaDesktopApp {
         if (!menu.children || menu.children.length === 0) continue;
         result.push({
           text: menu.label || menu.id,
-          items: this.mapPennaToolbarToTauriItems(menu.children, run),
+          items: this.mapPennaToolbarToTauriItems(
+            menu.children,
+            run,
+            accelerators,
+          ),
         });
       } else {
         const btn = item as any;
@@ -332,8 +327,8 @@ export class PennaDesktopApp {
           text: btn.label || btn.id,
           action: run(btn.id),
         };
-        if (ACCELERATORS[btn.id]) {
-          resItem.accelerator = ACCELERATORS[btn.id];
+        if (accelerators[btn.id]) {
+          resItem.accelerator = accelerators[btn.id];
         }
         result.push(resItem);
       }
@@ -348,8 +343,20 @@ export class PennaDesktopApp {
     const run = (cmd: string) => () => {
       this.editor?.eventBus.emit("editor:command", { command: cmd });
     };
-    
-    const dynamicItems = this.mapPennaToolbarToTauriItems(DEFAULT_TOOLBAR_ITEMS, run);
+
+    const shortcutsEnabled = this.config.getItem<boolean>("editor.shortcuts");
+    const accelerators: Record<string, string> = {};
+    if (shortcutsEnabled) {
+      for (const [id, key] of Object.entries(resolveShortcuts())) {
+        accelerators[id] = toTauriAccelerator(key);
+      }
+    }
+
+    const dynamicItems = this.mapPennaToolbarToTauriItems(
+      DEFAULT_TOOLBAR_ITEMS,
+      run,
+      accelerators,
+    );
 
     const menu = await Menu.new({
       items: [

@@ -1,4 +1,5 @@
 
+import { fetch } from "@tauri-apps/plugin-http";
 import type { AiActionId, AiProvider, PennaConfig } from "./PennaConfig";
 
 interface AiProviderPreset {

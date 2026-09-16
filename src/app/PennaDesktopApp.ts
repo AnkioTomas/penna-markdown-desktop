@@ -14,7 +14,7 @@ import "penna-markdown/transformer.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { message } from "@tauri-apps/plugin-dialog";
-import { defaultWindowIcon } from "@tauri-apps/api/app";
+import { defaultWindowIcon, getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Menu } from "@tauri-apps/api/menu";
 import { stat } from "@tauri-apps/plugin-fs";
@@ -337,7 +337,10 @@ export class PennaDesktopApp {
   }
 
   private async setupMenu(): Promise<void> {
-    const appIcon = await defaultWindowIcon();
+    const [appIcon, appVersion] = await Promise.all([
+      defaultWindowIcon(),
+      getVersion(),
+    ]);
     // penna-markdown 0.2.2：AI 命令要求 ctx.logger；runCommand/commandCtx 未带 logger，
     // 会静默 return false。走 editor:command → CommandBridge（带 logger）才是对的路径。
     const run = (cmd: string) => () => {
@@ -367,6 +370,7 @@ export class PennaDesktopApp {
               item: {
                 About: {
                   name: "Penna Markdown",
+                  version: appVersion,
                   icon: appIcon ?? undefined,
                 },
               },

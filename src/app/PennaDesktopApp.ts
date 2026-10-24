@@ -568,8 +568,17 @@ export class PennaDesktopApp {
     if (!file) {
       return;
     }
-    if (await this.session.openDocument(file)) {
-      this.updateEditorContent();
+    try {
+      if (await this.session.openDocument(file)) {
+        this.updateEditorContent();
+      }
+    } catch (error) {
+      console.error("[penna-desktop] open file failed", file, error);
+      const msg = error instanceof Error ? error.message : String(error);
+      await message(`打开文件失败: ${msg}`, {
+        title: "打开失败",
+        kind: "error",
+      });
     }
   }
 

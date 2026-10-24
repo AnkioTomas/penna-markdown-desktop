@@ -43,21 +43,6 @@ interface Section {
   groups: FieldGroup[];
 }
 
-/**
- * penna-markdown 内置的远程渲染服务地址。
- *
- * 只能抄：库没从任何入口导出这几个常量（`penna-markdown` 和
- * `penna-markdown/transformer` 都没有），单独引子路径会把整个 transformer
- * 再打包一份，为三个字符串不值得。
- *
- * 升级依赖时核对：
- * dist/types/transformer/extends/block/mathBlock.d.ts   → MATH_API_HOST
- * dist/types/transformer/extends/block/specialCode.d.ts → MERMAID/ECHARTS_API_HOST
- */
-const BUILTIN_MATH_API = "https://math-api-delta.vercel.app";
-const BUILTIN_MERMAID_API = "https://mermaid.ink";
-const BUILTIN_ECHARTS_API = "https://echarts-api.vercel.app";
-
 /** 从供应商表推导，避免这句说明和 AI_PROVIDERS 脱节 */
 const THINKING_CAPABLE = (Object.keys(AI_PROVIDERS) as AiProvider[])
   .filter((id) => AI_PROVIDERS[id].thinkingOff)
@@ -239,30 +224,6 @@ const SECTIONS: Section[] = [
             label: "自动换行",
             type: "checkbox",
             hint: "关闭时超长的行改为横向滚动",
-          },
-        ],
-      },
-      {
-        title: "远程渲染服务",
-        hint: "公式和图表由远程服务渲染成图片，正文内容会离开本机。下面填的是内置地址，可改为自建服务；清空则回到内置地址。",
-        fields: [
-          {
-            key: "render.mathApiHost",
-            label: "公式（$...$）",
-            type: "text",
-            builtin: BUILTIN_MATH_API,
-          },
-          {
-            key: "render.mermaidApiHost",
-            label: "Mermaid",
-            type: "text",
-            builtin: BUILTIN_MERMAID_API,
-          },
-          {
-            key: "render.echartsApiHost",
-            label: "ECharts",
-            type: "text",
-            builtin: BUILTIN_ECHARTS_API,
           },
         ],
       },

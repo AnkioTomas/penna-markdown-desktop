@@ -2,5 +2,6 @@ allowBuilds:
   core-js: set this to true or false
 minimumReleaseAgeExclude:
   - penna-markdown
+  - katex@0.19.1
 packages:
   - '.'

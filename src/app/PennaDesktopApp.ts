@@ -11,6 +11,7 @@ import {
 } from "penna-markdown";
 import "penna-markdown/editor.css";
 import "penna-markdown/transformer.css";
+import "katex/dist/katex.min.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { message } from "@tauri-apps/plugin-dialog";
@@ -137,27 +138,16 @@ export class PennaDesktopApp {
     };
   }
 
-  /**
-   * 远程渲染服务地址：空串不是有效值。
-   * 库内是 `!= null` 兜底内置地址，传空串会拼出坏 URL，必须退化成 undefined。
-   */
-  private apiHost(key: string): string | undefined {
-    return this.config.getItem<string>(key).trim() || undefined;
-  }
-
   private buildSyntaxOptions(): SyntaxOptions {
     return {
       code: {
         enhanced: this.config.getItem<boolean>("render.codeEnhanced"),
         lineNumbers: this.config.getItem<boolean>("render.codeLineNumbers"),
         wrap: this.config.getItem<boolean>("render.codeWrap"),
-        mermaidApiHost: this.apiHost("render.mermaidApiHost"),
-        echartsApiHost: this.apiHost("render.echartsApiHost"),
       },
       atx_heading: {
         slug: this.config.getItem<boolean>("render.headingSlug"),
       },
-      math_block: { apiHost: this.apiHost("render.mathApiHost") },
     };
   }
 
@@ -267,6 +257,11 @@ export class PennaDesktopApp {
       toolbar: false,
       preview: {
         maxWidth: `${boot.previewMaxWidth}px`,
+        engines: {
+          math: () => import("katex"),
+          mermaid: () => import("mermaid"),
+          echarts: () => import("echarts"),
+        },
         transformerEngineOptions: { syntaxOptions: boot.syntaxOptions },
       },
       editor: this.buildEditorOptions(boot),

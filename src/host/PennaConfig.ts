@@ -41,10 +41,6 @@ const DEFAULTS: Record<string, unknown> = {
   "render.codeLineNumbers": true,
   "render.codeWrap": false,
   "render.headingSlug": true,
-  /** 公式 / 图表走远程渲染服务；空串表示用库内置地址 */
-  "render.mathApiHost": "",
-  "render.mermaidApiHost": "",
-  "render.echartsApiHost": "",
   "upload.mode": "off",
   "upload.directory": "assets",
   "upload.script": "",

@@ -124,7 +124,22 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf squashfs-tools
+
+      # Tauri 把 AppRun 写成 0770。linuxdeploy 把它改名为 AppRun.wrapped 后打进包。
+      # 自己启动时 FUSE 把文件显示成当前用户，所以本机看不出来；firejail / AppImage 目录
+      # 用 root 挂载、普通用户执行，直接 Permission denied。打包器只在缓存里没有这个文件时
+      # 才下载，所以先放一份 0755。见 https://github.com/tauri-apps/tauri/issues/16155
+      - name: AppRun 必须是 0755
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          dir="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+          mkdir -p "$dir"
+          curl -fsSL -o "$dir/AppRun-$arch" \
+            "https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-$arch"
+          chmod 755 "$dir/AppRun-$arch"
 
       - name: Install frontend dependencies
         run: pnpm install
@@ -140,3 +155,23 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: 确认 AppRun.wrapped 是 0755
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(src-tauri/target/release/bundle/appimage/*.AppImage)
+          if [[ ${#files[@]} -ne 1 ]]; then
+            echo "::error::期望恰好一个 AppImage，实际 ${#files[@]} 个"
+            exit 1
+          fi
+          img="${files[0]}"
+          chmod +x "$img"
+          offset="$("$img" --appimage-offset)"
+          mode="$(unsquashfs -lln -o "$offset" "$img" | awk '/\/AppRun\.wrapped$/ { print $1 }')"
+          echo "AppRun.wrapped ${mode:-missing} in ${img}"
+          if [[ "$mode" != "-rwxr-xr-x" ]]; then
+            echo "::error::AppRun.wrapped 是 ${mode:-missing}，必须是 -rwxr-xr-x"
+            exit 1
+          fi

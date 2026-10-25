@@ -14,8 +14,13 @@ export type AiActionId =
 export type AiProvider =
   | "openai"
   | "openrouter"
+  | "gemini"
   | "deepseek"
   | "moonshot"
+  | "zhipu"
+  | "volcengine"
+  | "dashscope"
+  | "siliconflow"
   | "ollama"
   | "custom";
 
@@ -55,10 +60,8 @@ const DEFAULTS: Record<string, unknown> = {
   "ai.apiKey": "",
   /** -1 = 用 AI_ACTION_TEMPERATURE 里该动作的内置温度 */
   "ai.temperature": -1,
-  "ai.thinking": true,
-  "ai.headers": {},
-  /** 附加请求体，直接合并进 chat/completions；可覆盖内置供应商参数 */
-  "ai.body": {},
+  /** false = 请求里带上该供应商关闭思考的参数 */
+  "ai.thinking": false,
   /** 空串 = 用 AI_ACTION_PROMPTS 里该动作的内置提示词 */
   "ai.prompt.polish": "",
   "ai.prompt.proofread": "",

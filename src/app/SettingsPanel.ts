@@ -43,12 +43,6 @@ interface Section {
   groups: FieldGroup[];
 }
 
-/** 从供应商表推导，避免这句说明和 AI_PROVIDERS 脱节 */
-const THINKING_CAPABLE = (Object.keys(AI_PROVIDERS) as AiProvider[])
-  .filter((id) => AI_PROVIDERS[id].thinkingOff)
-  .map((id) => AI_PROVIDERS[id].label)
-  .join(" / ");
-
 const SECTIONS: Section[] = [
   {
     id: "global",
@@ -289,13 +283,7 @@ const SECTIONS: Section[] = [
             key: "ai.thinking",
             label: "思考模式",
             type: "checkbox",
-            hint: `仅 ${THINKING_CAPABLE} 支持切换；其余供应商请用下面的「附加参数」自行指定`,
-          },
-          {
-            key: "ai.body",
-            label: "附加参数",
-            type: "json",
-            hint: "供应商专有参数，原样合并进请求体，可覆盖上面的思考模式开关。model / messages / temperature / stream 由上面的设置决定，写在这里无效",
+            hint: "默认关闭（润色等场景更快）。OpenAI 推理模型无法关闭；选「自定义」时按 Endpoint 域名识别供应商",
           },
         ],
       },
@@ -549,7 +537,8 @@ function bindProviderFields(root: HTMLElement): void {
     endpointInput.placeholder = preset.endpoint || "自定义供应商需手动填写";
     modelInput.placeholder = preset.defaultModel || "自定义供应商需手动填写";
     if (thinkingInput) {
-      thinkingInput.disabled = !preset.thinkingOff;
+      thinkingInput.disabled =
+        providerSelect.value !== "custom" && !preset.thinkingOff;
     }
   };
 
